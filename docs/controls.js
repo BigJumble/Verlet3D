@@ -2,14 +2,14 @@ export class Controls {
     static init() {
         // Keyboard events
         window.addEventListener('keydown', (event) => {
-            if (!Controls.pressedKeys.has(event.key)) {
-                Controls.keysPressedThisFrame.add(event.key);
+            if (!Controls.pressedKeys.has(event.code)) {
+                Controls.keysPressedThisFrame.add(event.code);
             }
-            Controls.pressedKeys.add(event.key);
+            Controls.pressedKeys.add(event.code);
         });
         window.addEventListener('keyup', (event) => {
-            Controls.pressedKeys.delete(event.key);
-            Controls.keysReleasedThisFrame.add(event.key);
+            Controls.pressedKeys.delete(event.code);
+            Controls.keysReleasedThisFrame.add(event.code);
         });
         // Mouse events
         window.addEventListener('mousemove', (event) => {
@@ -29,7 +29,7 @@ export class Controls {
             Controls.keysReleasedThisFrame.add(mouseKey);
         });
     }
-    static update() {
+    static clearUpdate() {
         // Clear the frame-specific input states
         Controls.keysPressedThisFrame.clear();
         Controls.keysReleasedThisFrame.clear();

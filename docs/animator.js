@@ -2,13 +2,16 @@ export class Animator {
     static startAnimation(renderCallback) {
         this.animationCallbacks.push(renderCallback);
         if (!this.animationFrameId) {
-            const animate = () => {
+            const animate = (timestamp) => {
+                const deltaTime = (timestamp - this.lastTimestamp) / 1000; // Convert to seconds
+                this.lastTimestamp = timestamp;
                 for (const callback of this.animationCallbacks) {
-                    callback();
+                    callback(deltaTime);
                 }
                 this.animationFrameId = requestAnimationFrame(animate);
             };
-            animate();
+            this.lastTimestamp = performance.now();
+            animate(this.lastTimestamp);
         }
     }
     static stopAnimation(renderCallback) {
@@ -25,3 +28,4 @@ export class Animator {
     }
 }
 Animator.animationCallbacks = [];
+Animator.lastTimestamp = 0;

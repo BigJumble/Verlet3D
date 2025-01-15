@@ -1,14 +1,17 @@
 import { WebGPU } from "./webgpu.js";
 import { Controls } from "./controls.js";
 import { Animator } from "./animator.js";
-import { SpheresShader } from "./shaders/spheres.js";
+import { CameraShader } from "./shaders/camera.js";
 async function main() {
     Controls.init();
     await WebGPU.init();
     // ExampleShader.init();
     // ExampleShader.update();
-    SpheresShader.init();
-    SpheresShader.update();
-    Animator.startAnimation(Controls.update);
+    // SpheresShader.init();
+    // SpheresShader.update();
+    CameraShader.init();
+    Animator.startAnimation((deltaTime) => CameraShader.controllerUpdate(deltaTime));
+    Animator.startAnimation((deltaTime) => CameraShader.update());
+    Animator.startAnimation((deltaTime) => Controls.clearUpdate()); // must be last
 }
 main();
