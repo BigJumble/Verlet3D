@@ -1,11 +1,10 @@
 import { WebGPU } from "../webgpu.js";
-import { Controls } from "../controls.js";
+import { PlayerController } from "../playerController.js";
 export class CameraShader {
     static init() {
-        // Create uniform buffer for camera matrices
         this.uniformBuffer = WebGPU.device.createBuffer({
-            size: 2 * 16 * 4, // Two 4x4 matrices (view and projection)
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            size: 128, // Two 4x4 matrices
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         // Create bind group layout
         this.bindGroupLayout = WebGPU.device.createBindGroupLayout({
@@ -40,28 +39,72 @@ export class CameraShader {
 
                 @vertex
                 fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-                    // Simple cube vertices
-                    var positions = array<vec3f, 8>(
-                        vec3f(-1.0, -1.0, -1.0),
-                        vec3f( 1.0, -1.0, -1.0),
-                        vec3f( 1.0,  1.0, -1.0),
-                        vec3f(-1.0,  1.0, -1.0),
-                        vec3f(-1.0, -1.0,  1.0),
-                        vec3f( 1.0, -1.0,  1.0),
-                        vec3f( 1.0,  1.0,  1.0),
-                        vec3f(-1.0,  1.0,  1.0)
+                    // Cube vertices arranged for triangle strip
+                    var positions = array<vec3f, 24>(
+                        // Back face
+                        vec3f(1.0, 1.0, -1.0),    // 0
+                        vec3f(1.0, -1.0, -1.0),   // 1
+                        vec3f(-1.0, 1.0, -1.0),   // 2
+                        vec3f(-1.0, -1.0, -1.0),  // 3
+                        // Right face
+                        vec3f(1.0, 1.0, 1.0),     // 4
+                        vec3f(1.0, -1.0, 1.0),    // 5
+                        vec3f(1.0, 1.0, -1.0),    // 6
+                        vec3f(1.0, -1.0, -1.0),   // 7
+                        // Front face
+                        vec3f(-1.0, 1.0, 1.0),    // 8
+                        vec3f(-1.0, -1.0, 1.0),   // 9
+                        vec3f(1.0, 1.0, 1.0),     // 10
+                        vec3f(1.0, -1.0, 1.0),    // 11
+                        // Left face
+                        vec3f(-1.0, 1.0, -1.0),   // 12
+                        vec3f(-1.0, -1.0, -1.0),  // 13
+                        vec3f(-1.0, 1.0, 1.0),    // 14
+                        vec3f(-1.0, -1.0, 1.0),   // 15
+                        // Top face
+                        vec3f(-1.0, 1.0, 1.0),    // 16
+                        vec3f(1.0, 1.0, 1.0),     // 17
+                        vec3f(-1.0, 1.0, -1.0),   // 18
+                        vec3f(1.0, 1.0, -1.0),    // 19
+                        // Bottom face
+                        vec3f(-1.0, -1.0, -1.0),  // 20
+                        vec3f(1.0, -1.0, -1.0),   // 21
+                        vec3f(-1.0, -1.0, 1.0),   // 22
+                        vec3f(1.0, -1.0, 1.0)     // 23
                     );
 
-                    // Simple colors for vertices
-                    var colors = array<vec3f, 8>(
+                    // Colors for vertices
+                    var colors = array<vec3f, 24>(
+                        // Back face (Red)
                         vec3f(1.0, 0.0, 0.0),
+                        vec3f(1.0, 0.0, 0.0),
+                        vec3f(1.0, 0.0, 0.0),
+                        vec3f(1.0, 0.0, 0.0),
+                        // Right face (Green)
                         vec3f(0.0, 1.0, 0.0),
+                        vec3f(0.0, 1.0, 0.0),
+                        vec3f(0.0, 1.0, 0.0),
+                        vec3f(0.0, 1.0, 0.0),
+                        // Front face (Blue)
                         vec3f(0.0, 0.0, 1.0),
+                        vec3f(0.0, 0.0, 1.0),
+                        vec3f(0.0, 0.0, 1.0),
+                        vec3f(0.0, 0.0, 1.0),
+                        // Left face (Yellow)
                         vec3f(1.0, 1.0, 0.0),
+                        vec3f(1.0, 1.0, 0.0),
+                        vec3f(1.0, 1.0, 0.0),
+                        vec3f(1.0, 1.0, 0.0),
+                        // Top face (Magenta)
                         vec3f(1.0, 0.0, 1.0),
+                        vec3f(1.0, 0.0, 1.0),
+                        vec3f(1.0, 0.0, 1.0),
+                        vec3f(1.0, 0.0, 1.0),
+                        // Bottom face (Cyan)
                         vec3f(0.0, 1.0, 1.0),
-                        vec3f(1.0, 1.0, 1.0),
-                        vec3f(0.5, 0.5, 0.5)
+                        vec3f(0.0, 1.0, 1.0),
+                        vec3f(0.0, 1.0, 1.0),
+                        vec3f(0.0, 1.0, 1.0)
                     );
 
                     var output: VertexOutput;
@@ -96,7 +139,8 @@ export class CameraShader {
                     }]
             },
             primitive: {
-                topology: "triangle-list",
+                topology: "triangle-strip",
+                stripIndexFormat: "uint32",
                 cullMode: "back"
             },
             depthStencil: {
@@ -105,63 +149,19 @@ export class CameraShader {
                 format: "depth24plus"
             }
         });
-    }
-    static controllerUpdate(deltaTime) {
-        // Get current view matrix
-        // console.log(this.viewMatrix);
-        // const viewMatrix = new Float32Array(16);
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, this.viewMatrix);
-        // Camera movement speed
-        const moveSpeed = 2.0 * deltaTime;
-        const rotateSpeed = 1.0 * deltaTime;
-        // console.log(Controls.pressedKeys)
-        // Forward/backward movement
-        if (Controls.getKey('KeyW')) {
-            this.viewMatrix[14] += moveSpeed;
-        }
-        if (Controls.getKey('KeyS')) {
-            this.viewMatrix[14] -= moveSpeed;
-        }
-        // Left/right movement 
-        if (Controls.getKey('KeyA')) {
-            this.viewMatrix[12] -= moveSpeed;
-        }
-        if (Controls.getKey('KeyD')) {
-            this.viewMatrix[12] += moveSpeed;
-        }
-        // Up/down movement
-        if (Controls.getKey('Space')) {
-            this.viewMatrix[13] += moveSpeed;
-        }
-        if (Controls.getKey('ShiftLeft')) {
-            this.viewMatrix[13] -= moveSpeed;
-        }
-        // Update view matrix in uniform buffer
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, this.viewMatrix);
-    }
-    static update() {
-        // Create perspective projection matrix
-        const aspect = WebGPU.canvas.width / WebGPU.canvas.height;
-        const fov = Math.PI / 4; // 45 degrees
-        const near = 0.1;
-        const far = 100.0;
-        const f = 1.0 / Math.tan(fov / 2);
-        const projectionMatrix = new Float32Array([
-            f / aspect, 0, 0, 0,
-            0, f, 0, 0,
-            0, 0, (far + near) / (near - far), -1,
-            0, 0, (2 * far * near) / (near - far), 0
-        ]);
-        // Update uniform buffer with matrices
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, this.viewMatrix);
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, projectionMatrix);
-        const commandEncoder = WebGPU.device.createCommandEncoder();
-        // Create depth texture
-        const depthTexture = WebGPU.device.createTexture({
+        // Create depth texture once
+        this.depthTexture = WebGPU.device.createTexture({
             size: [WebGPU.canvas.width, WebGPU.canvas.height],
             format: "depth24plus",
             usage: GPUTextureUsage.RENDER_ATTACHMENT
         });
+    }
+    static update() {
+        // console.log(PlayerController.viewMatrix);
+        // console.log(PlayerController.projectionMatrix);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.viewMatrix);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.projectionMatrix);
+        const commandEncoder = WebGPU.device.createCommandEncoder();
         const view = WebGPU.context.getCurrentTexture().createView();
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
@@ -171,7 +171,7 @@ export class CameraShader {
                     storeOp: "store"
                 }],
             depthStencilAttachment: {
-                view: depthTexture.createView(),
+                view: this.depthTexture.createView(),
                 depthClearValue: 1.0,
                 depthLoadOp: "clear",
                 depthStoreOp: "store",
@@ -179,15 +179,16 @@ export class CameraShader {
         });
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
-        renderPass.draw(8); // Draw cube vertices
+        // Draw each face of the cube
+        for (var i = 0; i < 6; i++) {
+            renderPass.draw(4, 1, i * 4); // Draw 4 vertices starting at i * 4
+        }
         renderPass.end();
         WebGPU.device.queue.submit([commandEncoder.finish()]);
     }
+    // Add cleanup method
+    static cleanup() {
+        this.depthTexture.destroy();
+        this.uniformBuffer.destroy();
+    }
 }
-// Create view matrix (camera looking at origin from 5 units back)
-CameraShader.viewMatrix = new Float32Array([
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, -5, 1
-]);

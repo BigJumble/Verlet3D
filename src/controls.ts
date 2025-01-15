@@ -3,6 +3,7 @@ export class Controls {
     static keysPressedThisFrame: Set<string> = new Set();
     static keysReleasedThisFrame: Set<string> = new Set();
     static mousePosition: { x: number, y: number } = { x: 0, y: 0 };
+    static mouseDelta: { x: number, y: number } = { x: 0, y: 0 };
 
     static init(): void {
         // Keyboard events
@@ -20,6 +21,8 @@ export class Controls {
 
         // Mouse events
         window.addEventListener('mousemove', (event) => {
+            Controls.mouseDelta.x = event.movementX;
+            Controls.mouseDelta.y = event.movementY;
             Controls.mousePosition.x = event.clientX;
             Controls.mousePosition.y = event.clientY;
         });
@@ -45,6 +48,8 @@ export class Controls {
         // Clear the frame-specific input states
         Controls.keysPressedThisFrame.clear();
         Controls.keysReleasedThisFrame.clear();
+        Controls.mouseDelta.x = 0;
+        Controls.mouseDelta.y = 0;
     }
 
 

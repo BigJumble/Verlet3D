@@ -4,6 +4,7 @@ import { Animator } from "./animator.js";
 import { ExampleShader } from "./shaders/example.js";
 import { SpheresShader } from "./shaders/spheres.js";
 import { CameraShader } from "./shaders/camera.js";
+import { PlayerController } from "./playerController.js";
 async function main() {
 
     Controls.init();
@@ -16,9 +17,10 @@ async function main() {
     // SpheresShader.update();
 
     CameraShader.init();
+
+    PlayerController.init();
     
-    
-    Animator.startAnimation((deltaTime) => CameraShader.controllerUpdate(deltaTime));
+    Animator.startAnimation((deltaTime) => PlayerController.update(deltaTime));
     Animator.startAnimation((deltaTime) => CameraShader.update());
 
 

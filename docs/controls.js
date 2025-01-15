@@ -13,6 +13,8 @@ export class Controls {
         });
         // Mouse events
         window.addEventListener('mousemove', (event) => {
+            Controls.mouseDelta.x = event.movementX;
+            Controls.mouseDelta.y = event.movementY;
             Controls.mousePosition.x = event.clientX;
             Controls.mousePosition.y = event.clientY;
         });
@@ -33,6 +35,8 @@ export class Controls {
         // Clear the frame-specific input states
         Controls.keysPressedThisFrame.clear();
         Controls.keysReleasedThisFrame.clear();
+        Controls.mouseDelta.x = 0;
+        Controls.mouseDelta.y = 0;
     }
     static getMousePosition() {
         return { ...this.mousePosition };
@@ -52,3 +56,4 @@ Controls.pressedKeys = new Set();
 Controls.keysPressedThisFrame = new Set();
 Controls.keysReleasedThisFrame = new Set();
 Controls.mousePosition = { x: 0, y: 0 };
+Controls.mouseDelta = { x: 0, y: 0 };
