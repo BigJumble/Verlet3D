@@ -14,7 +14,7 @@ export class PlayerController {
     // Scene rotation angles
     static yaw = 0;
     static pitch = 0;
-    static position = new Float32Array([0, 0, 5]); // Scene offset x, y, z
+    static position = new Float32Array([0, 0, 150]); // Scene offset x, y, z
 
     static lastMouseX = 0;
     static lastMouseY = 0;
@@ -32,7 +32,7 @@ export class PlayerController {
         const aspect = WebGPU.canvas.width / WebGPU.canvas.height;
         const fov = Math.PI / 4;
         const near = 0.1;
-        const far = 100.0;
+        const far = 1000.0;
         const f = 1.0 / Math.tan(fov / 2);
         
         this.projectionMatrix.set([

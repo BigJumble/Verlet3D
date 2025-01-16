@@ -3,15 +3,29 @@ import { PlayerController } from "../playerController.js";
 export class CameraShader {
     static init() {
         const golden_ratio = (1.0 + Math.sqrt(5.0)) / 2.0;
+        // Create instance buffer with random positions
+        const instanceData = new Float32Array(this.NUM_INSTANCES * 3); // xyz for each instance
+        for (let i = 0; i < this.NUM_INSTANCES; i++) {
+            instanceData[i * 3] = (Math.random() - 0.5) * 200; // x
+            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 200; // y
+            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 200; // z
+        }
+        this.instanceBuffer = WebGPU.device.createBuffer({
+            size: instanceData.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+            mappedAtCreation: true
+        });
+        new Float32Array(this.instanceBuffer.getMappedRange()).set(instanceData);
+        this.instanceBuffer.unmap();
         this.uniformBuffer = WebGPU.device.createBuffer({
-            size: 128, // Two 4x4 matrices
+            size: 144, // Two 4x4 matrices (128 bytes) + light position (16 bytes)
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         // Create bind group layout
         this.bindGroupLayout = WebGPU.device.createBindGroupLayout({
             entries: [{
                     binding: 0,
-                    visibility: GPUShaderStage.VERTEX,
+                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                     buffer: { type: "uniform" }
                 }]
         });
@@ -30,16 +44,29 @@ export class CameraShader {
                 struct Uniforms {
                     viewMatrix: mat4x4f,
                     projectionMatrix: mat4x4f,
+                    lightPosition: vec3f,
                 }
                 @binding(0) @group(0) var<uniform> uniforms: Uniforms;
 
                 struct VertexOutput {
                     @builtin(position) position: vec4f,
                     @location(0) color: vec3f,
+                    @location(1) worldPos: vec3f,
+                    @location(2) normal: vec3f,
+                }
+
+                fn calculateTriangleNormal(p1: vec3f, p2: vec3f, p3: vec3f) -> vec3f {
+                    let v1 = p2 - p1;
+                    let v2 = p3 - p1;
+                    return normalize(cross(v1, v2));
                 }
 
                 @vertex
-                fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+                fn vertexMain(
+                    @builtin(vertex_index) vertexIndex: u32,
+                    @builtin(instance_index) instanceIndex: u32,
+                    @location(0) instancePosition: vec3f
+                ) -> VertexOutput {
                     let gr = ${golden_ratio}f;
                     var positions = array<vec3f, 12>(
                         vec3f(-1.0, gr, 0.0),
@@ -80,19 +107,42 @@ export class CameraShader {
                     );
 
                     var output: VertexOutput;
+                    let triangleIndex = vertexIndex / 3u;
                     let idx = indices[vertexIndex];
+                    
+                    // Get the three vertices of the current triangle
+                    let p1 = positions[indices[triangleIndex * 3u]];
+                    let p2 = positions[indices[triangleIndex * 3u + 1u]];
+                    let p3 = positions[indices[triangleIndex * 3u + 2u]];
+                    
+                    // Calculate triangle normal
+                    let triangleNormal = calculateTriangleNormal(p1, p2, p3);
+                    
                     var worldPos = positions[idx];
-                    // Normalize the position to create a unit icosahedron
-                    worldPos = normalize(worldPos);
+                    // Normalize and scale the position to create a small unit icosahedron
+                    worldPos = normalize(worldPos) * 0.2;
+                    // Offset by instance position
+                    worldPos = worldPos + instancePosition;
+                    
+                    output.worldPos = worldPos;
+                    output.normal = triangleNormal;
                     var viewPos = uniforms.viewMatrix * vec4f(worldPos, 1.0);
                     output.position = uniforms.projectionMatrix * viewPos;
-                    output.color = colors[idx];
+                    output.color = vec3f(1.0,1.0, 1.0);//colors[idx];
                     return output;
                 }
 
                 @fragment
-                fn fragmentMain(@location(0) color: vec3f) -> @location(0) vec4f {
-                    return vec4f(color, 1.0);
+                fn fragmentMain(
+                    @location(0) color: vec3f,
+                    @location(1) worldPos: vec3f,
+                    @location(2) normal: vec3f
+                ) -> @location(0) vec4f {
+                    let lightDir = normalize(uniforms.lightPosition - worldPos);
+                    let ambient = 0.2;
+                    let diffuse = max(dot(normal, lightDir), 0.0);
+                    let lighting = ambient + diffuse;
+                    return vec4f(color * lighting, 1.0);
                 }
             `
         });
@@ -104,7 +154,16 @@ export class CameraShader {
             }),
             vertex: {
                 module: shaderModule,
-                entryPoint: "vertexMain"
+                entryPoint: "vertexMain",
+                buffers: [{
+                        arrayStride: 12, // 3 * float32
+                        stepMode: "instance",
+                        attributes: [{
+                                shaderLocation: 0,
+                                offset: 0,
+                                format: "float32x3"
+                            }]
+                    }]
             },
             fragment: {
                 module: shaderModule,
@@ -133,6 +192,7 @@ export class CameraShader {
     static update() {
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.viewMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.projectionMatrix);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 128, this.lightPosition);
         const commandEncoder = WebGPU.device.createCommandEncoder();
         const view = WebGPU.context.getCurrentTexture().createView();
         const renderPass = commandEncoder.beginRenderPass({
@@ -151,8 +211,9 @@ export class CameraShader {
         });
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
-        // Draw all triangles of the icosahedron
-        renderPass.draw(60, 1, 0); // 20 triangles * 3 vertices = 60 vertices
+        renderPass.setVertexBuffer(0, this.instanceBuffer);
+        // Draw all triangles of the icosahedron for each instance
+        renderPass.draw(60, this.NUM_INSTANCES, 0, 0); // 20 triangles * 3 vertices = 60 vertices
         renderPass.end();
         WebGPU.device.queue.submit([commandEncoder.finish()]);
     }
@@ -160,5 +221,8 @@ export class CameraShader {
     static cleanup() {
         this.depthTexture.destroy();
         this.uniformBuffer.destroy();
+        this.instanceBuffer.destroy();
     }
 }
+CameraShader.lightPosition = new Float32Array([4.0, 500.0, 6.0]); // Light position in world space
+CameraShader.NUM_INSTANCES = 1000000;
