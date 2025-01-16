@@ -1,5 +1,4 @@
 import { WebGPU } from "../webgpu.js";
-import { Controls } from "../controls.js";
 import { PlayerController } from "../playerController.js";
 
 export class CameraShader {
@@ -10,11 +9,13 @@ export class CameraShader {
     static depthTexture: GPUTexture;
 
     static init(): void {
+        const golden_ratio = (1.0 + Math.sqrt(5.0)) / 2.0;
 
         this.uniformBuffer = WebGPU.device.createBuffer({
             size: 128, // Two 4x4 matrices
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
+
         // Create bind group layout
         this.bindGroupLayout = WebGPU.device.createBindGroupLayout({
             entries: [{
@@ -50,79 +51,53 @@ export class CameraShader {
 
                 @vertex
                 fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-                    // Cube vertices arranged for triangle strip
-                    var positions = array<vec3f, 24>(
-                        // Back face
-                        vec3f(1.0, 1.0, -1.0),    // 0
-                        vec3f(1.0, -1.0, -1.0),   // 1
-                        vec3f(-1.0, 1.0, -1.0),   // 2
-                        vec3f(-1.0, -1.0, -1.0),  // 3
-                        // Right face
-                        vec3f(1.0, 1.0, 1.0),     // 4
-                        vec3f(1.0, -1.0, 1.0),    // 5
-                        vec3f(1.0, 1.0, -1.0),    // 6
-                        vec3f(1.0, -1.0, -1.0),   // 7
-                        // Front face
-                        vec3f(-1.0, 1.0, 1.0),    // 8
-                        vec3f(-1.0, -1.0, 1.0),   // 9
-                        vec3f(1.0, 1.0, 1.0),     // 10
-                        vec3f(1.0, -1.0, 1.0),    // 11
-                        // Left face
-                        vec3f(-1.0, 1.0, -1.0),   // 12
-                        vec3f(-1.0, -1.0, -1.0),  // 13
-                        vec3f(-1.0, 1.0, 1.0),    // 14
-                        vec3f(-1.0, -1.0, 1.0),   // 15
-                        // Top face
-                        vec3f(-1.0, 1.0, 1.0),    // 16
-                        vec3f(1.0, 1.0, 1.0),     // 17
-                        vec3f(-1.0, 1.0, -1.0),   // 18
-                        vec3f(1.0, 1.0, -1.0),    // 19
-                        // Bottom face
-                        vec3f(-1.0, -1.0, -1.0),  // 20
-                        vec3f(1.0, -1.0, -1.0),   // 21
-                        vec3f(-1.0, -1.0, 1.0),   // 22
-                        vec3f(1.0, -1.0, 1.0)     // 23
+                    let gr = ${golden_ratio}f;
+                    var positions = array<vec3f, 12>(
+                        vec3f(-1.0, gr, 0.0),
+                        vec3f(1.0, gr, 0.0),
+                        vec3f(-1.0, -gr, 0.0),
+                        vec3f(1.0, -gr, 0.0),
+                        vec3f(0.0, -1.0, gr),
+                        vec3f(0.0, 1.0, gr),
+                        vec3f(0.0, -1.0, -gr),
+                        vec3f(0.0, 1.0, -gr),
+                        vec3f(gr, 0.0, -1.0),
+                        vec3f(gr, 0.0, 1.0),
+                        vec3f(-gr, 0.0, -1.0),
+                        vec3f(-gr, 0.0, 1.0)
                     );
 
-                    // Colors for vertices
-                    var colors = array<vec3f, 24>(
-                        // Back face (Red)
-                        vec3f(1.0, 0.0, 0.0),
-                        vec3f(1.0, 0.0, 0.0),
-                        vec3f(1.0, 0.0, 0.0),
-                        vec3f(1.0, 0.0, 0.0),
-                        // Right face (Green)
-                        vec3f(0.0, 1.0, 0.0),
-                        vec3f(0.0, 1.0, 0.0),
-                        vec3f(0.0, 1.0, 0.0),
-                        vec3f(0.0, 1.0, 0.0),
-                        // Front face (Blue)
-                        vec3f(0.0, 0.0, 1.0),
-                        vec3f(0.0, 0.0, 1.0),
-                        vec3f(0.0, 0.0, 1.0),
-                        vec3f(0.0, 0.0, 1.0),
-                        // Left face (Yellow)
-                        vec3f(1.0, 1.0, 0.0),
-                        vec3f(1.0, 1.0, 0.0),
-                        vec3f(1.0, 1.0, 0.0),
-                        vec3f(1.0, 1.0, 0.0),
-                        // Top face (Magenta)
-                        vec3f(1.0, 0.0, 1.0),
-                        vec3f(1.0, 0.0, 1.0),
-                        vec3f(1.0, 0.0, 1.0),
-                        vec3f(1.0, 0.0, 1.0),
-                        // Bottom face (Cyan)
-                        vec3f(0.0, 1.0, 1.0),
-                        vec3f(0.0, 1.0, 1.0),
-                        vec3f(0.0, 1.0, 1.0),
-                        vec3f(0.0, 1.0, 1.0)
+                    // Indices for the 20 triangles of the icosahedron
+                    var indices = array<u32, 60>(
+                        0,11,5,  0,5,1,   0,1,7,   0,7,10,  0,10,11,
+                        1,5,9,   5,11,4,  11,10,2, 10,7,6,  7,1,8,
+                        3,9,4,   3,4,2,   3,2,6,   3,6,8,   3,8,9,
+                        4,9,5,   2,4,11,  6,2,10,  8,6,7,   9,8,1
+                    );
+
+                    var colors = array<vec3f, 12>(
+                        vec3f(1.0, 0.0, 0.0),  // Red
+                        vec3f(0.0, 1.0, 0.0),  // Green
+                        vec3f(0.0, 0.0, 1.0),  // Blue
+                        vec3f(1.0, 1.0, 0.0),  // Yellow
+                        vec3f(1.0, 0.0, 1.0),  // Magenta
+                        vec3f(0.0, 1.0, 1.0),  // Cyan
+                        vec3f(1.0, 0.5, 0.0),  // Orange
+                        vec3f(0.5, 1.0, 0.0),  // Lime
+                        vec3f(0.0, 0.5, 1.0),  // Sky Blue
+                        vec3f(1.0, 0.0, 0.5),  // Pink
+                        vec3f(0.5, 0.0, 1.0),  // Purple
+                        vec3f(0.0, 1.0, 0.5)   // Sea Green
                     );
 
                     var output: VertexOutput;
-                    var worldPos = positions[vertexIndex];
+                    let idx = indices[vertexIndex];
+                    var worldPos = positions[idx];
+                    // Normalize the position to create a unit icosahedron
+                    worldPos = normalize(worldPos);
                     var viewPos = uniforms.viewMatrix * vec4f(worldPos, 1.0);
                     output.position = uniforms.projectionMatrix * viewPos;
-                    output.color = colors[vertexIndex];
+                    output.color = colors[idx];
                     return output;
                 }
 
@@ -151,8 +126,7 @@ export class CameraShader {
                 }]
             },
             primitive: {
-                topology: "triangle-strip",
-                stripIndexFormat: "uint32",
+                topology: "triangle-list",
                 cullMode: "back"
             },
             depthStencil: {
@@ -171,8 +145,6 @@ export class CameraShader {
     }
 
     static update(): void {
-        // console.log(PlayerController.viewMatrix);
-        // console.log(PlayerController.projectionMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.viewMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.projectionMatrix);
 
@@ -198,10 +170,8 @@ export class CameraShader {
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
         
-        // Draw each face of the cube
-        for (var i = 0; i < 6; i++) {
-            renderPass.draw(4, 1, i * 4); // Draw 4 vertices starting at i * 4
-        }
+        // Draw all triangles of the icosahedron
+        renderPass.draw(60, 1, 0); // 20 triangles * 3 vertices = 60 vertices
         
         renderPass.end();
 
