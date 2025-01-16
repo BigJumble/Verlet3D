@@ -17,6 +17,16 @@
         <script defer src="main.js" type="module"></script>
 </head>
 <body>
+    <div id="webgpu-error" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+        <h2>WebGPU Not Supported</h2>
+        <p>Your browser does not support WebGPU. Please try a compatible browser like Chrome, Edge or Opera.</p>
+    </div>
+    <script>
+        if (!navigator.gpu) {
+            document.getElementById('webgpu-error').style.display = 'block';
+            document.getElementById('webgpu-canvas').style.display = 'none';
+        }
+    </script>
     <canvas id="webgpu-canvas"></canvas>
 </body>
 </html>
