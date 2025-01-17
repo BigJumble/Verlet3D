@@ -10,7 +10,6 @@ export class PlayerController {
     ]);
 
     static projectionMatrix = new Float32Array(16);
-
     // Scene rotation angles
     static yaw = 0;
     static pitch = 0;
@@ -32,7 +31,7 @@ export class PlayerController {
         const aspect = WebGPU.canvas.width / WebGPU.canvas.height;
         const fov = Math.PI / 4;
         const near = 0.1;
-        const far = 1000.0;
+        const far = 3000.0;
         const f = 1.0 / Math.tan(fov / 2);
         
         this.projectionMatrix.set([
@@ -56,7 +55,7 @@ export class PlayerController {
         }
 
         // Calculate movement direction in world space
-        const moveSpeed = 10 * deltaTime;
+        const moveSpeed = 50 * deltaTime;
         // Update position based on key input and rotation
         if (Controls.getKey('KeyW')) {
             this.position[0] -= moveSpeed * Math.sin(-this.yaw);

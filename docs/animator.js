@@ -5,6 +5,12 @@ export class Animator {
             const animate = (timestamp) => {
                 const deltaTime = (timestamp - this.lastTimestamp) / 1000; // Convert to seconds
                 this.lastTimestamp = timestamp;
+                // Calculate FPS
+                const fps = 1 / deltaTime;
+                const fpsCounter = document.getElementById('fps-counter');
+                if (fpsCounter) {
+                    fpsCounter.textContent = `FPS: ${Math.round(fps)}`;
+                }
                 for (const callback of this.animationCallbacks) {
                     callback(deltaTime);
                 }

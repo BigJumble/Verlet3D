@@ -7,7 +7,7 @@ export class CameraShader {
         const instanceData = new Float32Array(this.NUM_INSTANCES * 3); // xyz for each instance
         for (let i = 0; i < this.NUM_INSTANCES; i++) {
             instanceData[i * 3] = (Math.random() - 0.5) * 200; // x
-            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 200; // y
+            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 10; // y
             instanceData[i * 3 + 2] = (Math.random() - 0.5) * 200; // z
         }
         this.instanceBuffer = WebGPU.device.createBuffer({
@@ -182,7 +182,12 @@ export class CameraShader {
                 format: "depth24plus"
             }
         });
-        // Create depth texture once
+        this.resize();
+    }
+    static resize() {
+        if (this.depthTexture) {
+            this.depthTexture.destroy();
+        }
         this.depthTexture = WebGPU.device.createTexture({
             size: [WebGPU.canvas.width, WebGPU.canvas.height],
             format: "depth24plus",

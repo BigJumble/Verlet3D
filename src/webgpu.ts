@@ -1,3 +1,6 @@
+import { CameraShader } from "./shaders/camera.js";
+import { PlayerController } from "./playerController.js";
+
 export class WebGPU {
     static device: GPUDevice;
     static context: GPUCanvasContext;
@@ -47,6 +50,9 @@ export class WebGPU {
             // Set the canvas size to match the window's device pixel ratio
             this.canvas.width = window.innerWidth * window.devicePixelRatio;
             this.canvas.height = window.innerHeight * window.devicePixelRatio;
+            CameraShader.resize();
+            // Update the projection matrix to prevent view stretching
+            PlayerController.updateProjectionMatrix();
         }
     }
 }
