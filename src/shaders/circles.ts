@@ -9,16 +9,16 @@ export class CameraShader {
     static depthTexture: GPUTexture;
     static lightPosition: Float32Array = new Float32Array([4.0, 500.0, 6.0]); // Light position in world space
     static instanceBuffer: GPUBuffer;
-    static NUM_INSTANCES = 6000;
+    static NUM_INSTANCES = 20000000;
 
     static init(): void {
 
         // Create instance buffer with random positions
         const instanceData = new Float32Array(this.NUM_INSTANCES * 3); // xyz for each instance
         for (let i = 0; i < this.NUM_INSTANCES; i++) {
-            instanceData[i * 3] = (Math.random() - 0.5) * 200; // x
-            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 200; // y
-            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 200; // z
+            instanceData[i * 3] = (Math.random() - 0.5) * 2000; // x
+            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 2000; // y
+            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 2000; // z
         }
 
         this.instanceBuffer = WebGPU.device.createBuffer({
@@ -30,7 +30,7 @@ export class CameraShader {
         this.instanceBuffer.unmap();
 
         this.uniformBuffer = WebGPU.device.createBuffer({
-            size: 160, // Two 4x4 matrices (128 bytes) + light position (16 bytes) + camera position (16 bytes)
+            size: (4*4*3+4)*4, // Three 4x4 matrices (128 bytes) + light position (16 bytes) + camera position (16 bytes)
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
@@ -57,19 +57,18 @@ export class CameraShader {
             label: "circle shader",
             code: /*wgsl*/`
                 struct Uniforms {
-                    viewMatrix: mat4x4f,
+                    translationMatrix: mat4x4f,
+                    rotationMatrix: mat4x4f,
                     projectionMatrix: mat4x4f,
                     lightPosition: vec4f,
-                    cameraPosition: vec4f,
                 }
                 @binding(0) @group(0) var<uniform> uniforms: Uniforms;
 
                 struct VertexOutput {
                     @builtin(position) position: vec4f,
                     @location(0) color: vec3f,
+                    @location(1) uv: vec2f,
                 }
-
-
 
                 @vertex
                 fn vertexMain(
@@ -82,30 +81,67 @@ export class CameraShader {
                         vec2<f32>(-1.732, -1.0),
                         vec2<f32>(1.732, -1.0)
                     );
+                    
+                    // UV coordinates for triangle vertices
+                    var uvs = array<vec2f, 3>(
+                        vec2<f32>(0.5, 0.866),  // Top - Using sqrt(3)/2 ≈ 0.866 for equilateral triangle
+                        vec2<f32>(0.0, 0.0),  // Bottom left
+                        vec2<f32>(1.0, 0.0)   // Bottom right
+                    );
 
                     var output: VertexOutput;
                     var localPos = vec3f(positions[vertexIndex], 0.0);
+                    // Calculate direction from instance position to camera position
+                    let cameraPos = -uniforms.translationMatrix[3].xyz;
+                    let toCamera = normalize(cameraPos - instancePosition);
+                    
+                    // Create rotation matrix to face camera
+                    let up = vec3f(0.0, 1.0, 0.0);
+                    let right = normalize(cross(up, toCamera));
+                    let adjustedUp = normalize(cross(toCamera, right));
+                    
+                    // Apply billboard rotation to local position
+                    localPos = right * localPos.x + adjustedUp * localPos.y + toCamera * localPos.z;
+                    // apply translation
+                    var worldPos = localPos + instancePosition;
+                    
+                    // Apply view transform
+                    var viewPos = uniforms.translationMatrix * vec4f(worldPos, 1.0);
 
-                    // Apply rotation first
-                    var rotatedPos = uniforms.viewMatrix * vec4f(localPos, 0.0);
+                    // Apply rotation
+                    var rotatedPos = uniforms.rotationMatrix * viewPos;
 
-                    // Then apply translation
-                    var worldPos = rotatedPos.xyz + instancePosition;
-
-                    var viewPos = uniforms.viewMatrix * vec4f(worldPos, 1.0); // View position
-
-                    output.position = uniforms.projectionMatrix * viewPos; // Perspective position
+                    // Apply projection
+                    output.position = uniforms.projectionMatrix * rotatedPos;
                     output.color = vec3f(1.0, 1.0, 1.0);
+                    output.uv = uvs[vertexIndex];
                     return output;
                 }
 
                 @fragment
                 fn fragmentMain(
-                    @location(0) color: vec3f
+                    @location(0) color: vec3f,
+                    @location(1) uv: vec2f,
                 ) -> @location(0) vec4f {
-                    return vec4f(color, 1.0);
+                    // Calculate distance from center of triangle
+                    let center = vec2f(0.5, 0.433);
+                    let dist = distance(uv, center);
+                    
+                    // Create circle
+                    let radius = 0.05;
+                    let smoothWidth = 0.01;
+                    let circle = 1.0 - smoothstep(radius - smoothWidth, radius + smoothWidth, dist);
+                    
+                    // Discard fragments outside circle
+                    if (circle < 0.01) {
+                        discard;
+                    }
+                    
+                    return vec4f(color * circle, circle);
                 }
-            `
+                
+                
+                `
         });
 
         // Create render pipeline
@@ -161,10 +197,10 @@ export class CameraShader {
     }
 
     static update(): void {
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.viewMatrix);
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.projectionMatrix);
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 128, this.lightPosition);
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 144, PlayerController.viewMatrix.subarray(12, 16)); // Camera position
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.translationMatrix);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.rotationMatrix);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 128, PlayerController.projectionMatrix);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 192, this.lightPosition);
 
         const commandEncoder = WebGPU.device.createCommandEncoder();
 

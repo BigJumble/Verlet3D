@@ -216,7 +216,7 @@ export class CameraShader {
     }
 
     static update(): void {
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.viewMatrix);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.translationMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.projectionMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 128, this.lightPosition);
 
