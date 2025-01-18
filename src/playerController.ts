@@ -6,7 +6,7 @@ export class PlayerController {
         1, 0, 0, 0,
         0, 1, 0, 0, 
         0, 0, 1, 0,
-        0, 0, -5, 1
+        0, 0, 0, 1
     ]);
 
     static projectionMatrix = new Float32Array(16);
@@ -108,9 +108,15 @@ export class PlayerController {
         this.viewMatrix[9] = -cosY * sinP;
         this.viewMatrix[10] = cosY * cosP;
 
-        // Translation (negative position because view matrix is inverse of camera transform)
-        this.viewMatrix[12] = -(this.position[0] * this.viewMatrix[0] + this.position[1] * this.viewMatrix[4] + this.position[2] * this.viewMatrix[8]);
-        this.viewMatrix[13] = -(this.position[0] * this.viewMatrix[1] + this.position[1] * this.viewMatrix[5] + this.position[2] * this.viewMatrix[9]);
-        this.viewMatrix[14] = -(this.position[0] * this.viewMatrix[2] + this.position[1] * this.viewMatrix[6] + this.position[2] * this.viewMatrix[10]);
+        // Translation without rotation (directly using position)
+        this.viewMatrix[12] = -this.position[0];
+        this.viewMatrix[13] = -this.position[1];
+        this.viewMatrix[14] = -this.position[2];
+
+        // // Translation (negative position because view matrix is inverse of camera transform)
+        // this.viewMatrix[12] = -(this.position[0] * this.viewMatrix[0] + this.position[1] * this.viewMatrix[4] + this.position[2] * this.viewMatrix[8]);
+        // this.viewMatrix[13] = -(this.position[0] * this.viewMatrix[1] + this.position[1] * this.viewMatrix[5] + this.position[2] * this.viewMatrix[9]);
+        // this.viewMatrix[14] = -(this.position[0] * this.viewMatrix[2] + this.position[1] * this.viewMatrix[6] + this.position[2] * this.viewMatrix[10]);
+
     }
 }
