@@ -63,12 +63,14 @@ export class PlayerController {
         // Combine rotations and translation
         // this.viewMatrix = MatrixUtils.multiply(this.viewMatrix, translation);
         this.rotationMatrix = MatrixUtils.multiply(rotationY, rotationX);
+        this.scaleMatrix = MatrixUtils.scale(30, 30, 30);
         //  = MatrixUtils.multiply(this.rotationMatrix, translation);
         // this.translationMatrix = MatrixUtils.multiply( this.translationMatrix, this.rotationMatrix);
     }
 }
 PlayerController.translationMatrix = MatrixUtils.identity();
 PlayerController.rotationMatrix = MatrixUtils.identity();
+PlayerController.scaleMatrix = MatrixUtils.identity();
 PlayerController.projectionMatrix = new Float32Array(16);
 // Scene rotation angles
 PlayerController.yaw = 0;

@@ -5,6 +5,7 @@ import { MatrixUtils } from "./matrix.js";
 export class PlayerController {
     static translationMatrix = MatrixUtils.identity();
     static rotationMatrix = MatrixUtils.identity();
+    static scaleMatrix = MatrixUtils.identity();
     static projectionMatrix = new Float32Array(16);
     // Scene rotation angles
     static yaw = 0;
@@ -84,6 +85,7 @@ export class PlayerController {
         // Combine rotations and translation
         // this.viewMatrix = MatrixUtils.multiply(this.viewMatrix, translation);
         this.rotationMatrix = MatrixUtils.multiply(rotationY, rotationX);
+        this.scaleMatrix = MatrixUtils.scale(30, 30, 30);
         //  = MatrixUtils.multiply(this.rotationMatrix, translation);
         // this.translationMatrix = MatrixUtils.multiply( this.translationMatrix, this.rotationMatrix);
     }
