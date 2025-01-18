@@ -1,4 +1,4 @@
-import { CameraShader } from "./shaders/camera.js";
+import { CameraShader } from "./shaders/circles.js";
 import { PlayerController } from "./playerController.js";
 export class WebGPU {
     static async init() {

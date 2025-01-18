@@ -9,7 +9,7 @@ export class CameraShader {
     static depthTexture: GPUTexture;
     static lightDirection: Float32Array = new Float32Array([0.0, -1.0, 0.0]); // Light direction in world space
     static instanceBuffer: GPUBuffer;
-    static NUM_INSTANCES = 10000000;
+    static NUM_INSTANCES = 1000000;
 
     static init(): void {
 
@@ -218,6 +218,7 @@ export class CameraShader {
     }
 
     static resize(): void {
+        console.log('a');
         if (this.depthTexture) {
             this.depthTexture.destroy();
         }

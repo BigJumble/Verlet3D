@@ -1,4 +1,4 @@
-import { CameraShader } from "./shaders/camera.js";
+import { CameraShader } from "./shaders/circles.js";
 import { PlayerController } from "./playerController.js";
 
 export class WebGPU {
@@ -46,6 +46,7 @@ export class WebGPU {
     }
 
     static resizeCanvas(): void {
+
         if (this.canvas) {
             // Set the canvas size to match the window's device pixel ratio
             this.canvas.width = window.innerWidth * window.devicePixelRatio;
