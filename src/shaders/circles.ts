@@ -10,16 +10,16 @@ export class CameraShader {
     static lightDirection: Float32Array = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
     static instanceBuffer: GPUBuffer;
     static colorIndexBuffer: GPUBuffer;
-    static NUM_INSTANCES = 10000000;
+    static NUM_INSTANCES = 5000000;
 
     static init(): void {
 
         // Create instance buffer with random positions
         const instanceData = new Float32Array(this.NUM_INSTANCES * 3); // xyz for each instance
         for (let i = 0; i < this.NUM_INSTANCES; i++) {
-            instanceData[i * 3] = (Math.random() - 0.5) * 2000; // x
-            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 2000; // y
-            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 2000; // z
+            instanceData[i * 3] = (Math.random() - 0.5) * 1000; // x
+            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 1000; // y
+            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 1000; // z
         }
 
         // Create color index buffer with random indices
@@ -81,11 +81,11 @@ export class CameraShader {
             
             struct VertexOutput {
                 @builtin(position) position: vec4f,
-                @location(0) color: vec3f,
+                @location(0) @interpolate(flat) color: vec3f,
                 @location(1) uv: vec2f,
-                @location(2) right: vec3f,
-                @location(3) adjustedUp: vec3f,
-                @location(4) toCamera: vec3f
+                @location(2) @interpolate(flat) right: vec3f,
+                @location(3) @interpolate(flat) adjustedUp: vec3f,
+                @location(4) @interpolate(flat) toCamera: vec3f
             }
             
             const colorPalette = array<vec3f, 6>(
@@ -157,11 +157,11 @@ export class CameraShader {
             
             @fragment
             fn fragmentMain(
-                @location(0) color: vec3f,
+                @location(0) @interpolate(flat) color: vec3f,
                 @location(1) uv: vec2f,
-                @location(2) right: vec3f,
-                @location(3) adjustedUp: vec3f,
-                @location(4) toCamera: vec3f
+                @location(2) @interpolate(flat) right: vec3f,
+                @location(3) @interpolate(flat) adjustedUp: vec3f,
+                @location(4) @interpolate(flat) toCamera: vec3f
             ) -> @location(0) vec4f {
                 // Calculate distance from center of triangle
                 const center = vec2f(0.0, 0.0);
