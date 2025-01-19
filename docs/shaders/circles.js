@@ -283,4 +283,4 @@ export class CameraShader {
     }
 }
 CameraShader.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
-CameraShader.NUM_INSTANCES = 20000000;
+CameraShader.NUM_INSTANCES = 10000000;

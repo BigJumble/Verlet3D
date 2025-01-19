@@ -10,7 +10,7 @@ export class CameraShader {
     static lightDirection: Float32Array = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
     static instanceBuffer: GPUBuffer;
     static colorIndexBuffer: GPUBuffer;
-    static NUM_INSTANCES = 20000000;
+    static NUM_INSTANCES = 10000000;
 
     static init(): void {
 

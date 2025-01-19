@@ -5,11 +5,18 @@ export class Animator {
             const animate = (timestamp) => {
                 const deltaTime = (timestamp - this.lastTimestamp) / 1000; // Convert to seconds
                 this.lastTimestamp = timestamp;
-                // Calculate FPS
+                // Calculate FPS and add to total
                 const fps = 1 / deltaTime;
-                const fpsCounter = document.getElementById('fps-counter');
-                if (fpsCounter) {
-                    fpsCounter.textContent = `FPS: ${Math.round(fps)}`;
+                this.totalFps += fps;
+                this.frameCount++;
+                // Calculate average FPS every 10 frames
+                if (this.frameCount >= 10) {
+                    const avgFps = this.totalFps / 10;
+                    if (this.fpsCounter) {
+                        this.fpsCounter.textContent = `FPS: ${Math.round(avgFps)}`;
+                    }
+                    this.frameCount = 0;
+                    this.totalFps = 0;
                 }
                 for (const callback of this.animationCallbacks) {
                     callback(deltaTime);
@@ -29,9 +36,14 @@ export class Animator {
             if (this.animationCallbacks.length === 0) {
                 cancelAnimationFrame(this.animationFrameId);
                 this.animationFrameId = 0;
+                this.frameCount = 0;
+                this.totalFps = 0;
             }
         }
     }
 }
 Animator.animationCallbacks = [];
 Animator.lastTimestamp = 0;
+Animator.fpsCounter = document.getElementById('fps-counter');
+Animator.frameCount = 0;
+Animator.totalFps = 0;
