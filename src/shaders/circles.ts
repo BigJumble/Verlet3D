@@ -1,15 +1,16 @@
 import { WebGPU } from "../webgpu.js";
 import { PlayerController } from "../playerController.js";
-
+import { MatrixUtils } from "../matrix.js";
 export class CameraShader {
     static pipeline: GPURenderPipeline;
     static bindGroup: GPUBindGroup;
     static bindGroupLayout: GPUBindGroupLayout;
     static uniformBuffer: GPUBuffer;
     static depthTexture: GPUTexture;
-    static lightDirection: Float32Array = new Float32Array([0.0, -1.0, 0.0]); // Light direction in world space
+    static lightDirection: Float32Array = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
     static instanceBuffer: GPUBuffer;
-    static NUM_INSTANCES = 10000000;
+    static colorIndexBuffer: GPUBuffer;
+    static NUM_INSTANCES = 20000000;
 
     static init(): void {
 
@@ -21,6 +22,12 @@ export class CameraShader {
             instanceData[i * 3 + 2] = (Math.random() - 0.5) * 2000; // z
         }
 
+        // Create color index buffer with random indices
+        const colorIndexData = new Uint32Array(this.NUM_INSTANCES);
+        for (let i = 0; i < this.NUM_INSTANCES; i++) {
+            colorIndexData[i] = Math.floor(Math.random() * 6); // 6 different colors
+        }
+
         this.instanceBuffer = WebGPU.device.createBuffer({
             size: instanceData.byteLength,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -28,6 +35,14 @@ export class CameraShader {
         });
         new Float32Array(this.instanceBuffer.getMappedRange()).set(instanceData);
         this.instanceBuffer.unmap();
+
+        this.colorIndexBuffer = WebGPU.device.createBuffer({
+            size: colorIndexData.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+            mappedAtCreation: true
+        });
+        new Uint32Array(this.colorIndexBuffer.getMappedRange()).set(colorIndexData);
+        this.colorIndexBuffer.unmap();
 
         this.uniformBuffer = WebGPU.device.createBuffer({
             size: (4*4*3+4)*4,
@@ -68,26 +83,38 @@ export class CameraShader {
                 @builtin(position) position: vec4f,
                 @location(0) color: vec3f,
                 @location(1) uv: vec2f,
-                @location(2) worldPosition: vec3f, // Pass world position to the fragment shader
+                @location(2) right: vec3f,
+                @location(3) adjustedUp: vec3f,
+                @location(4) toCamera: vec3f
             }
+            
+            const colorPalette = array<vec3f, 6>(
+                vec3f(1.0, 0.2, 0.2),  // Vibrant Red
+                vec3f(0.2, 1.0, 0.2),  // Vibrant Green
+                vec3f(0.2, 0.2, 1.0),  // Vibrant Blue
+                vec3f(1.0, 1.0, 0.2),  // Vibrant Yellow
+                vec3f(1.0, 0.2, 1.0),  // Vibrant Magenta
+                vec3f(0.2, 1.0, 1.0)   // Vibrant Cyan
+            );
             
             @vertex
             fn vertexMain(
                 @builtin(vertex_index) vertexIndex: u32,
                 @builtin(instance_index) instanceIndex: u32,
-                @location(0) instancePosition: vec3f
+                @location(0) instancePosition: vec3f,
+                @location(1) colorIndex: u32
             ) -> VertexOutput {
                 var positions = array<vec2f, 3>(
-                    vec2<f32>(0.0, 0.577350),           // Top vertex: (0, 1/√3)
-                    vec2<f32>(-0.5, -0.288675),         // Bottom left: (-1/2, -1/(2√3))
-                    vec2<f32>(0.5, -0.288675)           // Bottom right: (1/2, -1/(2√3))
+                    vec2<f32>(0.0,   0.5773502691896258),           // Top vertex: (0, 1/√3)
+                    vec2<f32>(-0.5, -0.2886751345948129),         // Bottom left: (-1/2, -1/(2√3))
+                    vec2<f32>(0.5,  -0.2886751345948129)           // Bottom right: (1/2, -1/(2√3))
                 );
                 
                 // UV coordinates for triangle vertices
                 var uvs = array<vec2f, 3>(
-                    vec2<f32>(0.0, 0.577350),           // Top vertex: (0, 1/√3)
-                    vec2<f32>(-0.5, -0.288675),         // Bottom left: (-1/2, -1/(2√3))
-                    vec2<f32>(0.5, -0.288675)           // Bottom right: (1/2, -1/(2√3))
+                    vec2<f32>(0.0,   0.5773502691896258),           // Top vertex: (0, 1/√3)
+                    vec2<f32>(-0.5, -0.2886751345948129),         // Bottom left: (-1/2, -1/(2√3))
+                    vec2<f32>(0.5,  -0.2886751345948129)           // Bottom right: (1/2, -1/(2√3))
                 );
             
                 var output: VertexOutput;
@@ -117,9 +144,14 @@ export class CameraShader {
             
                 // Apply projection
                 output.position = uniforms.projectionMatrix * rotatedPos;
-                output.color = vec3f(1.0, 1.0, 1.0); // Base color
+                output.color = colorPalette[colorIndex]; // Use color from palette
                 output.uv = uvs[vertexIndex];
-                output.worldPosition = worldPos; // Pass world position to fragment shader
+                
+                // Pass billboard basis vectors to fragment shader
+                output.right = right;
+                output.adjustedUp = adjustedUp;
+                output.toCamera = toCamera;
+                
                 return output;
             }
             
@@ -127,52 +159,47 @@ export class CameraShader {
             fn fragmentMain(
                 @location(0) color: vec3f,
                 @location(1) uv: vec2f,
-                @location(2) worldPosition: vec3f
+                @location(2) right: vec3f,
+                @location(3) adjustedUp: vec3f,
+                @location(4) toCamera: vec3f
             ) -> @location(0) vec4f {
                 // Calculate distance from center of triangle
-                let center = vec2f(0.0, 0.0);
+                const center = vec2f(0.0, 0.0);
                 let dist = distance(uv, center);
                 
                 // Create circle
-                let radius = 0.288675; // Distance from center to edge of the triangle
+                const radius = 0.2886751345948129; // Distance from center to edge of the triangle
                 if (dist > radius) {
                     discard;
                 }
-            
+                const inverseRadius = 3.464101615137754;// 1.0 / radius;
                 // Calculate normal for sphere shading in local space
-                //NORMALS STILL NOT EXACTLY CORRECT
-                let localNormal = normalize(vec3f(-uv.x, -uv.y, sqrt(max(0.0, 1.0 - dist * dist / (radius * radius))) * radius));
+                let localNormal = vec3f(uv.x*inverseRadius, uv.y*inverseRadius, sqrt(1-dist*dist*inverseRadius*inverseRadius));
                 
-                // Transform normal to world space
-                // Calculate world normal based on camera-to-object direction
-                let toObject = normalize(worldPosition - (-uniforms.translationMatrix[3].xyz));
-                let worldUp = vec3f(0.0, 1.0, 0.0);
-                let worldRight = normalize(cross(worldUp, toObject));
-                let worldAdjustedUp = normalize(cross(toObject, worldRight));
+                // Transform local normal using the billboard basis vectors from vertex shader
+                let worldNormal =
+                    right * localNormal.x + 
+                    adjustedUp * localNormal.y + 
+                    toCamera * localNormal.z;
+
+                //for debugging show normal direction as color
+
+                // return vec4f(worldNormal/2+0.5, 1.0);
                 
-                // Transform local normal using the calculated basis vectors
-                let worldNormal = normalize(
-                    worldRight * localNormal.x + 
-                    worldAdjustedUp * localNormal.y + 
-                    toObject * localNormal.z
-                );
-                // let worldNormal = normalize((uniforms.rotationMatrix * vec4f(localNormal, 0.0)).xyz);
-                
-                // Light direction in world space
-                let lightDir = normalize(uniforms.lightDirection.xyz);
-                
+                // Light direction in world space - transform by inverse rotation to keep it fixed
+                let lightDir = uniforms.lightDirection.xyz;
                 // Calculate diffuse lighting
-                let diffuse = max(dot(worldNormal, lightDir), 0.0);
+                let diffuse = max(dot(worldNormal, -lightDir), 0.0);
                 
                 // Add ambient light to avoid completely dark areas
                 let ambient = 0.2;
                 
                 // Combine lighting with base color
+                // let litColor = (worldNormal/2+0.5) * (diffuse + ambient);
                 let litColor = color * (diffuse + ambient);
                 
                 return vec4f(litColor, 1.0);
             }
-            
                 
                 `
         });
@@ -193,6 +220,15 @@ export class CameraShader {
                         shaderLocation: 0,
                         offset: 0,
                         format: "float32x3"
+                    }]
+                },
+                {
+                    arrayStride: 4, // 1 * uint32
+                    stepMode: "instance",
+                    attributes: [{
+                        shaderLocation: 1,
+                        offset: 0,
+                        format: "uint32"
                     }]
                 }]
             },
@@ -218,7 +254,7 @@ export class CameraShader {
     }
 
     static resize(): void {
-        console.log('a');
+        // console.log('a');
         if (this.depthTexture) {
             this.depthTexture.destroy();
         }
@@ -259,6 +295,7 @@ export class CameraShader {
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
         renderPass.setVertexBuffer(0, this.instanceBuffer);
+        renderPass.setVertexBuffer(1, this.colorIndexBuffer);
 
         // Draw all triangles of the icosahedron for each instance
         renderPass.draw(3, this.NUM_INSTANCES, 0, 0); // 20 triangles * 3 vertices = 60 vertices
@@ -273,5 +310,6 @@ export class CameraShader {
         this.depthTexture.destroy();
         this.uniformBuffer.destroy();
         this.instanceBuffer.destroy();
+        this.colorIndexBuffer.destroy();
     }
 }

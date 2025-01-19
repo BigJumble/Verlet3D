@@ -121,22 +121,22 @@ export class MatrixUtils {
         }
         console.log('');
     }
-}
-// Helper functions for vector operations
-function subtractVectors(a, b) {
-    return new Float32Array([a[0] - b[0], a[1] - b[1], a[2] - b[2]]);
-}
-function normalize(v) {
-    const length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    if (length > 0.00001) {
-        return new Float32Array([v[0] / length, v[1] / length, v[2] / length]);
+    // Helper functions for vector operations
+    static subtractVectors(a, b) {
+        return new Float32Array([a[0] - b[0], a[1] - b[1], a[2] - b[2]]);
     }
-    return new Float32Array([0, 0, 0]);
-}
-function cross(a, b) {
-    return new Float32Array([
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0]
-    ]);
+    static normalize(v) {
+        const length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+        if (length > 0.00001) {
+            return new Float32Array([v[0] / length, v[1] / length, v[2] / length]);
+        }
+        return new Float32Array([0, 0, 0]);
+    }
+    static cross(a, b) {
+        return new Float32Array([
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0]
+        ]);
+    }
 }
