@@ -6,9 +6,9 @@ export class CameraShader {
         // Create instance buffer with random positions
         const instanceData = new Float32Array(this.NUM_INSTANCES * 3); // xyz for each instance
         for (let i = 0; i < this.NUM_INSTANCES; i++) {
-            instanceData[i * 3] = (Math.random() - 0.5) * 1000; // x
-            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 100; // y
-            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 1000; // z
+            instanceData[i * 3] = (Math.random() - 0.5) * 2000; // x
+            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 2; // y
+            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 2000; // z
         }
         // Create color index buffer with random indices
         const colorIndexData = new Uint32Array(this.NUM_INSTANCES);
@@ -117,7 +117,7 @@ export class CameraShader {
                 let right = normalize(cross(up, toCamera));
                 let adjustedUp = normalize(cross(toCamera, right));
                 
-                localPos = localPos * 3.464101615137754 * 1; // Scale manually as needed
+                localPos = localPos * 3.464101615137754 * 0.5; // Scale manually as needed
                 
                 // Apply billboard rotation to local position
                 localPos = right * localPos.x + adjustedUp * localPos.y + toCamera * localPos.z;
@@ -188,7 +188,7 @@ export class CameraShader {
                 let litColor = color * (diffuse + ambient);
 
                 // Correct depth calculation
-                let sphereOffset = localz * 3.464101615137754 * 0.5; // Offset from the sphere center in world units
+                let sphereOffset = localz * 3.464101615137754 * 0.25; // Offset from the sphere center in world units
                 let actualZ = transformedCenter.z - sphereOffset; // Adjust depth based on sphere surface position
                 
                 // Normalize depth to clip space (0-1) using near/far planes
@@ -196,22 +196,6 @@ export class CameraShader {
                 const far = 3000.0;
                 let depth = (actualZ - near) / (far - near);
 
-                // Convert depth (0-1) to rainbow colors for visualization
-                var rainbow = vec3f(0.0);
-                let normalizedDepth = depth * 4.0; // Scale to cover all hue ranges
-                
-                if (normalizedDepth < 1.0) {
-                    rainbow = vec3f(0.0, normalizedDepth, 1.0); // Blue to Cyan
-                } else if (normalizedDepth < 2.0) {
-                    rainbow = vec3f(0.0, 1.0, 2.0 - normalizedDepth); // Cyan to Green
-                } else if (normalizedDepth < 3.0) {
-                    rainbow = vec3f(normalizedDepth - 2.0, 1.0, 0.0); // Green to Yellow
-                } else {
-                    rainbow = vec3f(1.0, 4.0 - normalizedDepth, 0.0); // Yellow to Red
-                }
-                
-                // litColor = rainbow; // Uncomment to visualize depth as colors
-                // return vec4f(litColor, 1.0);
                 return FragmentOutput(
                     vec4f(litColor, 1.0),
                     depth
@@ -318,4 +302,4 @@ export class CameraShader {
     }
 }
 CameraShader.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
-CameraShader.NUM_INSTANCES = 1000000;
+CameraShader.NUM_INSTANCES = 10000000;
