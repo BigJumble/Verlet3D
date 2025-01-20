@@ -7,7 +7,7 @@ export class CameraShader {
         const instanceData = new Float32Array(this.NUM_INSTANCES * 3); // xyz for each instance
         for (let i = 0; i < this.NUM_INSTANCES; i++) {
             instanceData[i * 3] = (Math.random() - 0.5) * 1000; // x
-            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 1000; // y
+            instanceData[i * 3 + 1] = (Math.random() - 0.5) * 100; // y
             instanceData[i * 3 + 2] = (Math.random() - 0.5) * 1000; // z
         }
         // Create color index buffer with random indices
@@ -67,7 +67,9 @@ export class CameraShader {
                 @location(1) uv: vec2f,
                 @location(2) @interpolate(flat) right: vec3f,
                 @location(3) @interpolate(flat) adjustedUp: vec3f,
-                @location(4) @interpolate(flat) toCamera: vec3f
+                @location(4) @interpolate(flat) toCamera: vec3f,
+                @location(5) @interpolate(flat) worldPos: vec3f,
+                @location(6) @interpolate(flat) transformedCenter: vec3f
             }
             
             const colorPalette = array<vec3f, 6>(
@@ -78,6 +80,11 @@ export class CameraShader {
                 vec3f(1.0, 0.2, 1.0),  // Vibrant Magenta
                 vec3f(0.2, 1.0, 1.0)   // Vibrant Cyan
             );
+
+            struct FragmentOutput {
+                @location(0) color: vec4f,
+                @builtin(frag_depth) depth: f32
+            }
             
             @vertex
             fn vertexMain(
@@ -86,14 +93,14 @@ export class CameraShader {
                 @location(0) instancePosition: vec3f,
                 @location(1) colorIndex: u32
             ) -> VertexOutput {
-                var positions = array<vec2f, 3>(
+                const positions = array<vec2f, 3>(
                     vec2<f32>(0.0,   0.5773502691896258),           // Top vertex: (0, 1/√3)
                     vec2<f32>(-0.5, -0.2886751345948129),         // Bottom left: (-1/2, -1/(2√3))
                     vec2<f32>(0.5,  -0.2886751345948129)           // Bottom right: (1/2, -1/(2√3))
                 );
                 
                 // UV coordinates for triangle vertices
-                var uvs = array<vec2f, 3>(
+                const uvs = array<vec2f, 3>(
                     vec2<f32>(0.0,   0.5773502691896258),           // Top vertex: (0, 1/√3)
                     vec2<f32>(-0.5, -0.2886751345948129),         // Bottom left: (-1/2, -1/(2√3))
                     vec2<f32>(0.5,  -0.2886751345948129)           // Bottom right: (1/2, -1/(2√3))
@@ -110,7 +117,7 @@ export class CameraShader {
                 let right = normalize(cross(up, toCamera));
                 let adjustedUp = normalize(cross(toCamera, right));
                 
-                localPos = localPos * 1; // Scale manually as needed
+                localPos = localPos * 3.464101615137754 * 1; // Scale manually as needed
                 
                 // Apply billboard rotation to local position
                 localPos = right * localPos.x + adjustedUp * localPos.y + toCamera * localPos.z;
@@ -124,8 +131,13 @@ export class CameraShader {
                 // Apply rotation
                 var rotatedPos = uniforms.rotationMatrix * viewPos;
             
+                let pos = uniforms.projectionMatrix * rotatedPos;
+                output.transformedCenter = (uniforms.projectionMatrix *
+                                            uniforms.rotationMatrix *
+                                            uniforms.translationMatrix * 
+                                            vec4f(instancePosition, 1.0)).xyz;
                 // Apply projection
-                output.position = uniforms.projectionMatrix * rotatedPos;
+                output.position = pos;
                 output.color = colorPalette[colorIndex]; // Use color from palette
                 output.uv = uvs[vertexIndex];
                 
@@ -133,7 +145,8 @@ export class CameraShader {
                 output.right = right;
                 output.adjustedUp = adjustedUp;
                 output.toCamera = toCamera;
-                
+                output.worldPos = worldPos;
+                // output.fragmentPos = pos.xyz;
                 return output;
             }
             
@@ -143,46 +156,68 @@ export class CameraShader {
                 @location(1) uv: vec2f,
                 @location(2) @interpolate(flat) right: vec3f,
                 @location(3) @interpolate(flat) adjustedUp: vec3f,
-                @location(4) @interpolate(flat) toCamera: vec3f
-            ) -> @location(0) vec4f {
+                @location(4) @interpolate(flat) toCamera: vec3f,
+                @location(5) @interpolate(flat) worldPos: vec3f,
+                @location(6) @interpolate(flat) transformedCenter: vec3f 
+            ) -> FragmentOutput {
                 // Calculate distance from center of triangle
                 const center = vec2f(0.0, 0.0);
                 let dist = distance(uv, center);
                 
-                // Create circle
+                // Create circle mask
                 const radius = 0.2886751345948129; // Distance from center to edge of the triangle
                 if (dist > radius) {
                     discard;
                 }
-                const inverseRadius = 3.464101615137754;// 1.0 / radius;
-                // Calculate normal for sphere shading in local space
-                let localNormal = vec3f(uv.x*inverseRadius, uv.y*inverseRadius, sqrt(1-dist*dist*inverseRadius*inverseRadius));
+                const inverseRadius = 3.464101615137754; // 1.0 / radius
                 
-                // Transform local normal using the billboard basis vectors from vertex shader
+                // Calculate local normal for sphere shading
+                let localz = sqrt(1.0 - dist * dist * inverseRadius * inverseRadius);
+                let localNormal = vec3f(uv.x * inverseRadius, uv.y * inverseRadius, localz);
+                
+                // Transform local normal to world space
                 let worldNormal =
                     right * localNormal.x + 
                     adjustedUp * localNormal.y + 
                     toCamera * localNormal.z;
 
-                //for debugging show normal direction as color
-
-                // return vec4f(worldNormal/2+0.5, 1.0);
-                
-                // Light direction in world space - transform by inverse rotation to keep it fixed
-                let lightDir = uniforms.lightDirection.xyz;
-                // Calculate diffuse lighting
+                // Light direction in world space
+                let lightDir = normalize(uniforms.lightDirection.xyz);
                 let diffuse = max(dot(worldNormal, -lightDir), 0.0);
-                
-                // Add ambient light to avoid completely dark areas
                 let ambient = 0.2;
-                
-                // Combine lighting with base color
-                // let litColor = (worldNormal/2+0.5) * (diffuse + ambient);
                 let litColor = color * (diffuse + ambient);
+
+                // Correct depth calculation
+                let sphereOffset = localz * 3.464101615137754 * 0.5; // Offset from the sphere center in world units
+                let actualZ = transformedCenter.z - sphereOffset; // Adjust depth based on sphere surface position
                 
-                return vec4f(litColor, 1.0);
+                // Normalize depth to clip space (0-1) using near/far planes
+                const near = 0.1;
+                const far = 3000.0;
+                let depth = (actualZ - near) / (far - near);
+
+                // Convert depth (0-1) to rainbow colors for visualization
+                var rainbow = vec3f(0.0);
+                let normalizedDepth = depth * 4.0; // Scale to cover all hue ranges
+                
+                if (normalizedDepth < 1.0) {
+                    rainbow = vec3f(0.0, normalizedDepth, 1.0); // Blue to Cyan
+                } else if (normalizedDepth < 2.0) {
+                    rainbow = vec3f(0.0, 1.0, 2.0 - normalizedDepth); // Cyan to Green
+                } else if (normalizedDepth < 3.0) {
+                    rainbow = vec3f(normalizedDepth - 2.0, 1.0, 0.0); // Green to Yellow
+                } else {
+                    rainbow = vec3f(1.0, 4.0 - normalizedDepth, 0.0); // Yellow to Red
+                }
+                
+                // litColor = rainbow; // Uncomment to visualize depth as colors
+                // return vec4f(litColor, 1.0);
+                return FragmentOutput(
+                    vec4f(litColor, 1.0),
+                    depth
+                );
             }
-                
+
                 `
         });
         // Create render pipeline
@@ -283,4 +318,4 @@ export class CameraShader {
     }
 }
 CameraShader.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
-CameraShader.NUM_INSTANCES = 5000000;
+CameraShader.NUM_INSTANCES = 1000000;
