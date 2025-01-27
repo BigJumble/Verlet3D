@@ -1,4 +1,4 @@
-import { CameraShader } from "./shaders/circles.js";
+import { CameraShader } from "./pipeline/circles.js";
 import { PlayerController } from "./playerController.js";
 
 export class WebGPU {
@@ -42,6 +42,7 @@ export class WebGPU {
             device: this.device,
             format: canvasFormat,
             alphaMode: "premultiplied",
+            // viewFormats: ["bgra8unorm-srgb"]
         });
     }
 

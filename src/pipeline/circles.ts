@@ -1,39 +1,52 @@
 import { WebGPU } from "../webgpu.js";
 import { PlayerController } from "../playerController.js";
 import { MatrixUtils } from "../matrix.js";
+import { Controls } from "../controls.js";
+
 export class CameraShader {
-    static init() {
+    static pipeline: GPURenderPipeline;
+    static bindGroup: GPUBindGroup;
+    static bindGroupLayout: GPUBindGroupLayout;
+    static uniformBuffer: GPUBuffer;
+    static depthTexture: GPUTexture;
+    static lightDirection: Float32Array = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
+    static instanceBuffer: GPUBuffer;
+    static colorIndexBuffer: GPUBuffer;
+    static NUM_INSTANCES = 11000000;
+    static computePipeline: GPUComputePipeline;
+    static computeBindGroup: GPUBindGroup;
+    static computeUniformBuffer: GPUBuffer;
+    static stagingBuffer: GPUBuffer;
+
+    static init(): void {
+
         // Create instance buffer with random positions
         const instanceData = new Float32Array(this.NUM_INSTANCES * 3); // xyz for each instance
         for (let i = 0; i < this.NUM_INSTANCES; i++) {
-            instanceData[i * 3] = (Math.random() - 0.5) * 2000; // x
+            instanceData[i * 3] = (Math.random() - 0.5) * 3000; // x
             instanceData[i * 3 + 1] = (Math.random() - 0.5) * 2; // y
-            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 2000; // z
+            instanceData[i * 3 + 2] = (Math.random() - 0.5) * 3000; // z
         }
-        // instanceData[0] = 0;
-        // instanceData[1] = 0;
-        // instanceData[2] = 0;
-        // instanceData[3] = 1;
-        // instanceData[4] = 0;
-        // instanceData[5] = 0;
-        // instanceData[6] = 0;
-        // instanceData[7] = 1;
-        // instanceData[8] = 0;        
-        // instanceData[9] = 0;
-        // instanceData[10] = 0;
-        // instanceData[11] = 1;
+
         // Create color index buffer with random indices
         const colorIndexData = new Uint32Array(this.NUM_INSTANCES);
         for (let i = 0; i < this.NUM_INSTANCES; i++) {
-            colorIndexData[i] = i % 6; //Math.floor(Math.random() * 6); // 6 different colors
+            colorIndexData[i] = i%6; //Math.floor(Math.random() * 6); // 6 different colors
         }
+
         this.instanceBuffer = WebGPU.device.createBuffer({
             size: instanceData.byteLength,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC,
             mappedAtCreation: true
         });
         new Float32Array(this.instanceBuffer.getMappedRange()).set(instanceData);
         this.instanceBuffer.unmap();
+
+        this.stagingBuffer = WebGPU.device.createBuffer({
+            size: instanceData.byteLength,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+        });
+
         this.colorIndexBuffer = WebGPU.device.createBuffer({
             size: colorIndexData.byteLength,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -41,30 +54,40 @@ export class CameraShader {
         });
         new Uint32Array(this.colorIndexBuffer.getMappedRange()).set(colorIndexData);
         this.colorIndexBuffer.unmap();
+
         this.uniformBuffer = WebGPU.device.createBuffer({
             size: (4 * 4 * 3 + 4) * 4,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
+
+        // Create compute uniform buffer
+        this.computeUniformBuffer = WebGPU.device.createBuffer({
+            size: 4, // 3 floats: time, amplitude, frequency
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+
         // Create bind group layout
         this.bindGroupLayout = WebGPU.device.createBindGroupLayout({
             entries: [{
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                    buffer: { type: "uniform" }
-                }]
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                buffer: { type: "uniform" }
+            }]
         });
+
         // Create bind group
         this.bindGroup = WebGPU.device.createBindGroup({
             layout: this.bindGroupLayout,
             entries: [{
-                    binding: 0,
-                    resource: { buffer: this.uniformBuffer }
-                }]
+                binding: 0,
+                resource: { buffer: this.uniformBuffer }
+            }]
         });
+
         // Create shader module
         const shaderModule = WebGPU.device.createShaderModule({
             label: "circle shader",
-            code: /*wgsl*/ `
+            code: /*wgsl*/`
             struct Uniforms {
                 translationMatrix: mat4x4f,
                 rotationMatrix: mat4x4f,
@@ -216,6 +239,81 @@ export class CameraShader {
 
                 `
         });
+
+        // Create compute shader for bobbing animation
+        const computeShaderCode = /*wgsl*/`
+            struct Uniforms {
+                time: f32,
+            }
+        
+            @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+            @group(0) @binding(1) var<storage, read_write> positions: array<f32>;
+        
+            @compute @workgroup_size(256)
+            fn computeMain(@builtin(global_invocation_id) global_id: vec3<u32>) {
+                let sphereID = u32(global_id.x);
+                if (global_id.x >= arrayLength(&positions)) {
+                    return;
+                }
+
+                // var pos = positions[index];
+                // Apply sinusoidal bobbing motion
+                // pos.x = 0;
+                // pos.y = f32(id.x); //sin(uniforms.time);   
+                // pos.z = 0;
+                // positions[sphereID*3] = f32(0);
+                positions[sphereID*3+1] = 6* f32(sin(uniforms.time+f32(sphereID%100)/0.127));
+                // positions[sphereID*3+2] = f32(0) ;
+            }
+        `;
+        
+        // Create compute pipeline
+        const computeModule = WebGPU.device.createShaderModule({
+            label: "Bobbing compute shader",
+            code: computeShaderCode
+        });
+        
+        this.computePipeline = WebGPU.device.createComputePipeline({
+            label: "Bobbing compute pipeline",
+            layout: WebGPU.device.createPipelineLayout({
+                bindGroupLayouts: [
+                    WebGPU.device.createBindGroupLayout({
+                        entries: [
+                            {
+                                binding: 0,
+                                visibility: GPUShaderStage.COMPUTE,
+                                buffer: { type: "uniform" }
+                            },
+                            {
+                                binding: 1,
+                                visibility: GPUShaderStage.COMPUTE,
+                                buffer: { type: "storage" }
+                            }
+                        ]
+                    })
+                ]
+            }),
+            compute: {
+                module: computeModule,
+                entryPoint: "computeMain"
+            }
+        });
+
+        // Create compute bind group
+        this.computeBindGroup = WebGPU.device.createBindGroup({
+            layout: this.computePipeline.getBindGroupLayout(0),
+            entries: [
+                {
+                    binding: 0,
+                    resource: { buffer: this.computeUniformBuffer }
+                },
+                {
+                    binding: 1,
+                    resource: { buffer: this.instanceBuffer }
+                }
+            ]
+        });
+
         // Create render pipeline
         this.pipeline = WebGPU.device.createRenderPipeline({
             label: "Camera pipeline",
@@ -226,30 +324,30 @@ export class CameraShader {
                 module: shaderModule,
                 entryPoint: "vertexMain",
                 buffers: [{
-                        arrayStride: 12, // 3 * float32
-                        stepMode: "instance",
-                        attributes: [{
-                                shaderLocation: 0,
-                                offset: 0,
-                                format: "float32x3"
-                            }]
-                    },
-                    {
-                        arrayStride: 4, // 1 * uint32
-                        stepMode: "instance",
-                        attributes: [{
-                                shaderLocation: 1,
-                                offset: 0,
-                                format: "uint32"
-                            }]
+                    arrayStride: 12, // 3 * float32
+                    stepMode: "instance",
+                    attributes: [{
+                        shaderLocation: 0,
+                        offset: 0,
+                        format: "float32x3"
                     }]
+                },
+                {
+                    arrayStride: 4, // 1 * uint32
+                    stepMode: "instance",
+                    attributes: [{
+                        shaderLocation: 1,
+                        offset: 0,
+                        format: "uint32"
+                    }]
+                }]
             },
             fragment: {
                 module: shaderModule,
                 entryPoint: "fragmentMain",
                 targets: [{
-                        format: navigator.gpu.getPreferredCanvasFormat()
-                    }]
+                    format: navigator.gpu.getPreferredCanvasFormat()
+                }]
             },
             primitive: {
                 topology: "triangle-list",
@@ -261,34 +359,51 @@ export class CameraShader {
                 format: "depth24plus"
             }
         });
+
         this.resize();
     }
-    static resize() {
+
+    static resize(): void {
         // console.log('a');
         if (this.depthTexture) {
             this.depthTexture.destroy();
         }
+
         this.depthTexture = WebGPU.device.createTexture({
             size: [WebGPU.canvas.width, WebGPU.canvas.height],
             format: "depth24plus",
             usage: GPUTextureUsage.RENDER_ATTACHMENT
         });
     }
-    static update() {
+
+    static async update(): Promise<void> {
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.translationMatrix);
         // WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.scaleMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.rotationMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 128, PlayerController.projectionMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 192, this.lightDirection);
+        
+        WebGPU.device.queue.writeBuffer(this.computeUniformBuffer, 0, new Float32Array([
+            performance.now()/1000,
+        ]));
         const commandEncoder = WebGPU.device.createCommandEncoder();
+
+        // Compute pass
+        const computePass = commandEncoder.beginComputePass();
+        computePass.setPipeline(this.computePipeline);
+        computePass.setBindGroup(0, this.computeBindGroup);
+        computePass.dispatchWorkgroups(Math.ceil(this.NUM_INSTANCES / 256));
+        computePass.end();
+
         const view = WebGPU.context.getCurrentTexture().createView();
+
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
-                    view: view,
-                    clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1.0 },
-                    loadOp: "clear",
-                    storeOp: "store"
-                }],
+                view: view,
+                clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1.0 },
+                loadOp: "clear",
+                storeOp: "store"
+            }],
             depthStencilAttachment: {
                 view: this.depthTexture.createView(),
                 depthClearValue: 1.0,
@@ -296,22 +411,48 @@ export class CameraShader {
                 depthStoreOp: "store",
             }
         });
+
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
         renderPass.setVertexBuffer(0, this.instanceBuffer);
         renderPass.setVertexBuffer(1, this.colorIndexBuffer);
+
         // Draw all triangles of the icosahedron for each instance
         renderPass.draw(3, this.NUM_INSTANCES, 0, 0); // 20 triangles * 3 vertices = 60 vertices
+
         renderPass.end();
-        WebGPU.device.queue.submit([commandEncoder.finish()]);
-    }
-    // Add cleanup method
-    static cleanup() {
+
+        
+
+        if(Controls.getKeyDown("KeyF")) {
+            // Map the staging buffer and read the data
+            commandEncoder.copyBufferToBuffer(
+                this.instanceBuffer, // source buffer
+                0, // source offset
+                this.stagingBuffer, // destination buffer
+                0, // destination offset
+                this.NUM_INSTANCES * 3 * 4 // size to copy
+            );
+
+            WebGPU.device.queue.submit([commandEncoder.finish()]);
+
+            await this.stagingBuffer.mapAsync(GPUMapMode.READ);
+            const copyArrayBuffer = this.stagingBuffer.getMappedRange();
+            const data = new Float32Array(copyArrayBuffer);
+
+            // Use the data as needed
+            console.log(data);
+        }
+        else{
+            WebGPU.device.queue.submit([commandEncoder.finish()]);
+        }
+
+
+    }    // Add cleanup method
+    static cleanup(): void {
         this.depthTexture.destroy();
         this.uniformBuffer.destroy();
         this.instanceBuffer.destroy();
         this.colorIndexBuffer.destroy();
     }
 }
-CameraShader.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
-CameraShader.NUM_INSTANCES = 10000000;

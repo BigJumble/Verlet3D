@@ -1,11 +1,11 @@
 import { WebGPU } from "./webgpu.js";
 import { Controls } from "./controls.js";
 import { Animator } from "./animator.js";
-import { ExampleShader } from "./shaders/example.js";
-import { SpheresShader } from "./shaders/spheres.js";
+// import { ExampleShader } from "./shaders/example.js";
+// import { SpheresShader } from "./shaders/spheres.js";
 import { PlayerController } from "./playerController.js";
-import { CameraShader } from "./shaders/circles.js";
-import { MatrixUtils } from "./matrix.js";
+import { CameraShader } from "./pipeline/circles.js";
+// import { MatrixUtils } from "./matrix.js";
 async function main() {
 
 
