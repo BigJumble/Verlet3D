@@ -14,31 +14,6 @@ export class ComputeCos {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         const computeModule = __classPrivateFieldGet(this, _a, "m", _ComputeCos_createComputeShader).call(this);
-        this.computePipeline = WebGPU.device.createComputePipeline({
-            label: "Bobbing compute pipeline",
-            layout: WebGPU.device.createPipelineLayout({
-                bindGroupLayouts: [
-                    WebGPU.device.createBindGroupLayout({
-                        entries: [
-                            {
-                                binding: 0,
-                                visibility: GPUShaderStage.COMPUTE,
-                                buffer: { type: "uniform" }
-                            },
-                            {
-                                binding: 1,
-                                visibility: GPUShaderStage.COMPUTE,
-                                buffer: { type: "storage" }
-                            }
-                        ]
-                    })
-                ]
-            }),
-            compute: {
-                module: computeModule,
-                entryPoint: "computeMain"
-            }
-        });
         this.computeBindGroupLayout = WebGPU.device.createBindGroupLayout({
             entries: [{
                     binding: 0,
@@ -65,6 +40,16 @@ export class ComputeCos {
                     resource: { buffer: SharedData.spheresBuffer }
                 }
             ]
+        });
+        this.computePipeline = WebGPU.device.createComputePipeline({
+            label: "Bobbing compute pipeline",
+            layout: WebGPU.device.createPipelineLayout({
+                bindGroupLayouts: [this.computeBindGroupLayout]
+            }),
+            compute: {
+                module: computeModule,
+                entryPoint: "computeMain"
+            }
         });
     }
     static tick(deltaTime) {

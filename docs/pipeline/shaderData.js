@@ -16,17 +16,25 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
     // Create instance buffer with random positions
     const instanceData = new Float32Array(this.NUM_SPHERES * 3); // xyz for each instance
     for (let i = 0; i < this.NUM_SPHERES; i++) {
-        instanceData[i * 3] = (Math.random() - 0.5) * 3000; // x
-        instanceData[i * 3 + 1] = (Math.random() - 0.5) * 2; // y
-        instanceData[i * 3 + 2] = (Math.random() - 0.5) * 3000; // z
+        const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]));
+        instanceData[i * 3] = dir[0] * Math.random() * 100; // x
+        instanceData[i * 3 + 1] = dir[1] * Math.random() * 100; // y
+        instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
     }
     this.spheresBuffer = WebGPU.device.createBuffer({
         size: instanceData.byteLength,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
         mappedAtCreation: true
     });
     new Float32Array(this.spheresBuffer.getMappedRange()).set(instanceData);
     this.spheresBuffer.unmap();
+    this.oldSpheresBuffer = WebGPU.device.createBuffer({
+        size: instanceData.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
+        mappedAtCreation: true
+    });
+    new Float32Array(this.oldSpheresBuffer.getMappedRange()).set(instanceData);
+    this.oldSpheresBuffer.unmap();
 }, _SharedData_initColorInderBuffer = function _SharedData_initColorInderBuffer() {
     // Create color index buffer with random indices
     const colorIndexData = new Uint32Array(this.NUM_SPHERES);
@@ -41,5 +49,5 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
     new Uint32Array(this.colorIndexBuffer.getMappedRange()).set(colorIndexData);
     this.colorIndexBuffer.unmap();
 };
-SharedData.NUM_SPHERES = 10000000;
+SharedData.NUM_SPHERES = 1000000;
 SharedData.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space

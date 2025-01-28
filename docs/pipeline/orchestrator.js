@@ -1,11 +1,12 @@
 import { PlayerController } from "../playerController.js";
 import { SharedData } from "./shaderData.js";
-import { ComputeCos } from "./shaders/computeCos.js";
+// import { ComputeCos } from "./shaders/computeCos.js";
+import { ComputeMovement } from "./shaders/computeMovement.js";
 import { RenderSpheres } from "./shaders/renderSpheres.js";
 export class Orchestrator {
     static init() {
         SharedData.init();
-        ComputeCos.init();
+        ComputeMovement.init();
         RenderSpheres.init();
     }
     static update(deltaTime) {
@@ -15,7 +16,8 @@ export class Orchestrator {
             RenderSpheres.resize();
             this.resized = false;
         }
-        ComputeCos.tick(deltaTime);
+        // console.log()
+        ComputeMovement.tick(deltaTime);
         RenderSpheres.tick();
     }
 }
