@@ -14,11 +14,13 @@ export class PlayerController {
 
     static lastMouseX = 0;
     static lastMouseY = 0;
+    static paused = false;
 
     static init(): void {
         // Set initial mouse position
         this.lastMouseX = Controls.mousePosition.x;
         this.lastMouseY = Controls.mousePosition.y;
+
 
         // Update projection matrix initially
         this.updateProjectionMatrix();
@@ -72,9 +74,12 @@ export class PlayerController {
         }
         if (Controls.getKeyDown('Mouse0')) {
             document.body.requestPointerLock();
+            this.paused = false;
         }
-        if (Controls.getKeyDown('Escape')) {
+        if (Controls.getKeyDown('KeyP')) {
+            this.paused = true;
             document.exitPointerLock();
+
         }
 
         // Create rotation matrices

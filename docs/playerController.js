@@ -52,8 +52,10 @@ export class PlayerController {
         }
         if (Controls.getKeyDown('Mouse0')) {
             document.body.requestPointerLock();
+            this.paused = false;
         }
-        if (Controls.getKeyDown('Escape')) {
+        if (Controls.getKeyDown('KeyP')) {
+            this.paused = true;
             document.exitPointerLock();
         }
         // Create rotation matrices
@@ -78,3 +80,4 @@ PlayerController.pitch = 0;
 PlayerController.position = new Float32Array([0, 0, 0]); // Scene offset x, y, z
 PlayerController.lastMouseX = 0;
 PlayerController.lastMouseY = 0;
+PlayerController.paused = false;
