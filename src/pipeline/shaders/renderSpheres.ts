@@ -120,12 +120,12 @@ export class RenderSpheres {
                     }
                     
                     const colorPalette = array<vec3f, 6>(
-                        vec3f(1.0, 0.2, 0.2),  // Vibrant Red
-                        vec3f(0.2, 1.0, 0.2),  // Vibrant Green
-                        vec3f(0.2, 0.2, 1.0),  // Vibrant Blue
-                        vec3f(1.0, 1.0, 0.2),  // Vibrant Yellow
-                        vec3f(1.0, 0.2, 1.0),  // Vibrant Magenta
-                        vec3f(0.2, 1.0, 1.0)   // Vibrant Cyan
+                        vec3f(1.0, 1.0, 1.0),  // White
+                        vec3f(0.0, 1.0, 0.0),  // Vibrant Green
+                        vec3f(0.0, 0.0, 1.0),  // Vibrant Blue
+                        vec3f(1.0, 1.0, 0.0),  // Vibrant Yellow
+                        vec3f(1.0, 0.0, 0.0),  // RED
+                        vec3f(0.2, 1.0, 1.0)   // Vibrant Cyan, HOW?
                     );
         
                     struct FragmentOutput {

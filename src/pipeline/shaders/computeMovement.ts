@@ -9,12 +9,9 @@ export class ComputeMovement {
 
 
     static init() {
-
-
-
         // Create compute uniform buffer
         this.computeUniformBuffer = WebGPU.device.createBuffer({
-            size: 4, // 3 floats: time, amplitude, frequency
+            size: 8, // 3 floats: time, amplitude, frequency
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         const computeModule = this.#createComputeShader();
@@ -59,7 +56,7 @@ export class ComputeMovement {
         });
 
         this.computePipeline = WebGPU.device.createComputePipeline({
-            label: "Bobbing compute pipeline",
+            label: "Movement compute pipeline",
             layout: WebGPU.device.createPipelineLayout({
                 bindGroupLayouts: [this.computeBindGroupLayout]
             }),
@@ -74,6 +71,7 @@ export class ComputeMovement {
         const computeShaderCode = /*wgsl*/`
         struct Uniforms {
             time: f32,
+            numSpheres: u32
         }
     
         @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -83,32 +81,30 @@ export class ComputeMovement {
         @compute @workgroup_size(256)
         fn computeMain(@builtin(global_invocation_id) global_id: vec3<u32>) {
             let sphereID = u32(global_id.x);
-            if (global_id.x >= arrayLength(&positions)) {
+            if (global_id.x >= uniforms.numSpheres) {
                 return;
             }
             
             var oldPos = vec3f(oldPositions[sphereID*3+0],oldPositions[sphereID*3+1],oldPositions[sphereID*3+2]);
             var nowPos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2]);
 
-            var velocity = nowPos - oldPos;
-            let len = length(nowPos);
-            var gravityDir = vec3f(0,0,0);
-            if (len > 500)
+            var gravityDir = -normalize(nowPos);
+            if (dot(nowPos,nowPos)>120*120)
             {
-                gravityDir = -nowPos / len;
+                gravityDir*=1;
             }
             else
             {
-                if(len != 0)
-                {
-                    gravityDir = nowPos / len;
-                }
+                gravityDir*=-1;
             }
+            let velocity = nowPos - oldPos;
 
             oldPos = nowPos;
 
             nowPos += velocity * 0.99;
-            nowPos += gravityDir * uniforms.time;
+
+            nowPos += gravityDir * 5 * 0.0166666 * 0.0166666;
+            // nowPos *= 0.99;
 
             oldPositions[sphereID*3+0] = oldPos.x;
             oldPositions[sphereID*3+1] = oldPos.y;
@@ -121,7 +117,7 @@ export class ComputeMovement {
     `;
 
         return WebGPU.device.createShaderModule({
-            label: "Bobbing compute shader",
+            label: "Movement compute shader",
             code: computeShaderCode
         });
     }
@@ -129,6 +125,7 @@ export class ComputeMovement {
     static tick(deltaTime: number) {
         WebGPU.device.queue.writeBuffer(this.computeUniformBuffer, 0, new Float32Array([
             deltaTime,
+            SharedData.NUM_SPHERES
         ]));
 
         const commandEncoder = WebGPU.device.createCommandEncoder();

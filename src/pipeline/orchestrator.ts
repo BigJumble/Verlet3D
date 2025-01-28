@@ -1,5 +1,7 @@
 import { PlayerController } from "../playerController.js";
 import { SharedData } from "./shaderData.js";
+import { ComputeCollisions } from "./shaders/computeCollisions.js";
+import { ComputeGrid } from "./shaders/computeGrid.js";
 // import { ComputeCos } from "./shaders/computeCos.js";
 import { ComputeMovement } from "./shaders/computeMovement.js";
 import { RenderSpheres } from "./shaders/renderSpheres.js";
@@ -11,6 +13,8 @@ export class Orchestrator
     {
         SharedData.init();
         ComputeMovement.init();
+        ComputeGrid.init();
+        ComputeCollisions.init();
         RenderSpheres.init();
     }
     static update(deltaTime:number)
@@ -23,6 +27,13 @@ export class Orchestrator
         }
         // console.log()
         ComputeMovement.tick(deltaTime);
+        ComputeGrid.tick();
+        ComputeCollisions.tick();
+        ComputeGrid.tick();
+        ComputeCollisions.tick();
+        // ComputeGrid.tick();
+        // ComputeCollisions.tick();
+
         RenderSpheres.tick();
     }
 }

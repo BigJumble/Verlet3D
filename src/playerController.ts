@@ -10,7 +10,7 @@ export class PlayerController {
     // Scene rotation angles
     static yaw = 0;
     static pitch = 0;
-    static position = new Float32Array([0, 0, 0]); // Scene offset x, y, z
+    static position = new Float32Array([0, 2, 10]); // Scene offset x, y, z
 
     static lastMouseX = 0;
     static lastMouseY = 0;

@@ -3,17 +3,17 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
     return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
-var _a, _ComputeMovement_createComputeShader;
+var _a, _ComputeCos_createComputeShader;
 import { WebGPU } from "../../webgpu.js";
 import { SharedData } from "../shaderData.js";
-export class ComputeMovement {
+export class ComputeCos {
     static init() {
         // Create compute uniform buffer
         this.computeUniformBuffer = WebGPU.device.createBuffer({
-            size: 8, // 3 floats: time, amplitude, frequency
+            size: 4, // 3 floats: time, amplitude, frequency
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
-        const computeModule = __classPrivateFieldGet(this, _a, "m", _ComputeMovement_createComputeShader).call(this);
+        const computeModule = __classPrivateFieldGet(this, _a, "m", _ComputeCos_createComputeShader).call(this);
         this.computeBindGroupLayout = WebGPU.device.createBindGroupLayout({
             entries: [{
                     binding: 0,
@@ -22,11 +22,6 @@ export class ComputeMovement {
                 },
                 {
                     binding: 1,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 2,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "storage" }
                 }
@@ -42,16 +37,12 @@ export class ComputeMovement {
                 },
                 {
                     binding: 1,
-                    resource: { buffer: SharedData.oldSpheresBuffer }
-                },
-                {
-                    binding: 2,
                     resource: { buffer: SharedData.spheresBuffer }
                 }
             ]
         });
         this.computePipeline = WebGPU.device.createComputePipeline({
-            label: "Movement compute pipeline",
+            label: "Bobbing compute pipeline",
             layout: WebGPU.device.createPipelineLayout({
                 bindGroupLayouts: [this.computeBindGroupLayout]
             }),
@@ -63,8 +54,7 @@ export class ComputeMovement {
     }
     static tick(deltaTime) {
         WebGPU.device.queue.writeBuffer(this.computeUniformBuffer, 0, new Float32Array([
-            deltaTime,
-            SharedData.NUM_SPHERES
+            performance.now() / 1000,
         ]));
         const commandEncoder = WebGPU.device.createCommandEncoder();
         // Compute pass
@@ -76,56 +66,30 @@ export class ComputeMovement {
         WebGPU.device.queue.submit([commandEncoder.finish()]);
     }
 }
-_a = ComputeMovement, _ComputeMovement_createComputeShader = function _ComputeMovement_createComputeShader() {
+_a = ComputeCos, _ComputeCos_createComputeShader = function _ComputeCos_createComputeShader() {
     const computeShaderCode = /*wgsl*/ `
         struct Uniforms {
             time: f32,
-            numSpheres: u32
         }
     
         @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-        @group(0) @binding(1) var<storage, read_write> oldPositions: array<f32>;
-        @group(0) @binding(2) var<storage, read_write> positions: array<f32>;
+        @group(0) @binding(1) var<storage, read_write> positions: array<f32>;
     
         @compute @workgroup_size(256)
         fn computeMain(@builtin(global_invocation_id) global_id: vec3<u32>) {
             let sphereID = u32(global_id.x);
-            if (global_id.x >= uniforms.numSpheres) {
+            if (global_id.x >= arrayLength(&positions)) {
                 return;
             }
-            
-            var oldPos = vec3f(oldPositions[sphereID*3+0],oldPositions[sphereID*3+1],oldPositions[sphereID*3+2]);
-            var nowPos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2]);
 
-            var gravityDir = -normalize(nowPos);
-            if (dot(nowPos,nowPos)>120*120)
-            {
-                gravityDir*=1;
-            }
-            else
-            {
-                gravityDir*=-1;
-            }
-            let velocity = nowPos - oldPos;
 
-            oldPos = nowPos;
-
-            nowPos += velocity * 0.99;
-
-            nowPos += gravityDir * 5 * 0.0166666 * 0.0166666;
-            // nowPos *= 0.99;
-
-            oldPositions[sphereID*3+0] = oldPos.x;
-            oldPositions[sphereID*3+1] = oldPos.y;
-            oldPositions[sphereID*3+2] = oldPos.z;
-
-            positions[sphereID*3+0] = nowPos.x;
-            positions[sphereID*3+1] = nowPos.y;
-            positions[sphereID*3+2] = nowPos.z;
+            //positions[sphereID*3+0] = f32(0);
+            positions[sphereID*3+1] = 6* f32(sin(uniforms.time+f32(sphereID%100)/0.127));
+            //positions[sphereID*3+2] = f32(0);
         }
     `;
     return WebGPU.device.createShaderModule({
-        label: "Movement compute shader",
+        label: "Bobbing compute shader",
         code: computeShaderCode
     });
 };

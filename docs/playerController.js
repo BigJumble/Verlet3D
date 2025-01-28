@@ -77,7 +77,7 @@ PlayerController.projectionMatrix = new Float32Array(16);
 // Scene rotation angles
 PlayerController.yaw = 0;
 PlayerController.pitch = 0;
-PlayerController.position = new Float32Array([0, 0, 0]); // Scene offset x, y, z
+PlayerController.position = new Float32Array([0, 2, 10]); // Scene offset x, y, z
 PlayerController.lastMouseX = 0;
 PlayerController.lastMouseY = 0;
 PlayerController.paused = false;
