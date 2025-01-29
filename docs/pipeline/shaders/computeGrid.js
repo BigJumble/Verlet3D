@@ -44,6 +44,11 @@ export class ComputeGrid {
                 {
                     binding: 6,
                     visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" }
+                },
+                {
+                    binding: 7,
+                    visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" }
                 }
             ]
@@ -79,10 +84,14 @@ export class ComputeGrid {
                 },
                 {
                     binding: 5,
-                    resource: { buffer: SharedData.colorIndexBuffer }
+                    resource: { buffer: SharedData.grid4Buffer }
                 },
                 {
                     binding: 6,
+                    resource: { buffer: SharedData.colorIndexBuffer }
+                },
+                {
+                    binding: 7,
                     resource: { buffer: uniformBuffer }
                 }
             ]
@@ -120,9 +129,10 @@ _a = ComputeGrid, _ComputeGrid_createComputeShader = function _ComputeGrid_creat
         @group(0) @binding(1) var<storage, read_write> atomicCounter: array<atomic<u32>>;
         @group(0) @binding(2) var<storage, read_write> grid1: array<u32>;
         @group(0) @binding(3) var<storage, read_write> grid2: array<u32>;
-        @group(0) @binding(4) var<storage, read_write> grid3: array<u32>;    
-        @group(0) @binding(5) var<storage, read_write> colors: array<u32>;    
-        @group(0) @binding(6) var<uniform> uniforms: Uniforms;
+        @group(0) @binding(4) var<storage, read_write> grid3: array<u32>;   
+        @group(0) @binding(5) var<storage, read_write> grid4: array<u32>;    
+        @group(0) @binding(6) var<storage, read_write> colors: array<u32>;    
+        @group(0) @binding(7) var<uniform> uniforms: Uniforms;
 
         @compute @workgroup_size(256)
         fn computeMain(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -139,7 +149,7 @@ _a = ComputeGrid, _ComputeGrid_createComputeShader = function _ComputeGrid_creat
 
             let gridIndex = spherePos.x + spherePos.y * 256 + spherePos.z * 65536;
 
-            let index = min(atomicAdd(&atomicCounter[gridIndex], 1), 3u);
+            let index = atomicAdd(&atomicCounter[gridIndex], 1);
             switch (index) {
                 case 0u:
                 {
@@ -159,9 +169,15 @@ _a = ComputeGrid, _ComputeGrid_createComputeShader = function _ComputeGrid_creat
                     colors[sphereID] = 3u;
                     break;
                 }
+                case 3u:
+                {
+                    grid4[gridIndex] = sphereID;
+                    colors[sphereID] = 4u;
+                    break;
+                }
                 default:
                 {
-                    colors[sphereID] = 4u; //RED error or out of bounds
+                    colors[sphereID] = 5u; //cyan error or out of bounds
                     //ignore sphere
                     break;
                 }

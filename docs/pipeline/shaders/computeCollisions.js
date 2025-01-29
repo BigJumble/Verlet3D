@@ -44,7 +44,7 @@ export class ComputeCollisions {
                 {
                     binding: 5,
                     visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
+                    buffer: { type: "read-only-storage" }
                 },
                 {
                     binding: 6,
@@ -53,6 +53,11 @@ export class ComputeCollisions {
                 },
                 {
                     binding: 7,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" }
+                },
+                {
+                    binding: 8,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" }
                 }
@@ -89,14 +94,18 @@ export class ComputeCollisions {
                 },
                 {
                     binding: 5,
-                    resource: { buffer: this.positionsNextBuffer }
+                    resource: { buffer: SharedData.grid4Buffer }
                 },
                 {
                     binding: 6,
-                    resource: { buffer: SharedData.colorIndexBuffer }
+                    resource: { buffer: this.positionsNextBuffer }
                 },
                 {
                     binding: 7,
+                    resource: { buffer: SharedData.colorIndexBuffer }
+                },
+                {
+                    binding: 8,
                     resource: { buffer: uniformBuffer }
                 }
             ]
@@ -119,12 +128,12 @@ export class ComputeCollisions {
                     buffer: { type: "storage" }
                 },
                 {
-                    binding: 5,
+                    binding: 6,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "storage" }
                 },
                 {
-                    binding: 7,
+                    binding: 8,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" }
                 }
@@ -139,11 +148,11 @@ export class ComputeCollisions {
                     resource: { buffer: SharedData.spheresBuffer }
                 },
                 {
-                    binding: 5,
+                    binding: 6,
                     resource: { buffer: this.positionsNextBuffer }
                 },
                 {
-                    binding: 7,
+                    binding: 8,
                     resource: { buffer: uniformBuffer }
                 }
             ]
@@ -188,9 +197,10 @@ _a = ComputeCollisions, _ComputeCollisions_createComputeShader = function _Compu
         @group(0) @binding(2) var<storage, read> grid1: array<u32>;
         @group(0) @binding(3) var<storage, read> grid2: array<u32>;
         @group(0) @binding(4) var<storage, read> grid3: array<u32>;  
-        @group(0) @binding(5) var<storage, read_write> positionsNext: array<f32>;
-        @group(0) @binding(6) var<storage, read_write> colors: array<u32>;
-        @group(0) @binding(7) var<uniform> uniforms: Uniforms;
+        @group(0) @binding(5) var<storage, read> grid4: array<u32>;  
+        @group(0) @binding(6) var<storage, read_write> positionsNext: array<f32>;
+        @group(0) @binding(7) var<storage, read_write> colors: array<u32>;
+        @group(0) @binding(8) var<uniform> uniforms: Uniforms;
         
         @compute @workgroup_size(256)
         fn copyPositions(@builtin(global_invocation_id) global_id: vec3<u32>) {

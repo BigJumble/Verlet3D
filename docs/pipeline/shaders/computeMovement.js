@@ -98,14 +98,19 @@ _a = ComputeMovement, _ComputeMovement_createComputeShader = function _ComputeMo
             var nowPos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2]);
 
             var gravityDir = -normalize(nowPos);
-            if (dot(nowPos,nowPos)>120*120)
+            if (dot(nowPos,nowPos)>60*60)
             {
                 gravityDir*=1;
+            }
+            else if (dot(nowPos,nowPos)>50*50)
+            {
+                gravityDir*=0;
             }
             else
             {
                 gravityDir*=-1;
             }
+
             let velocity = nowPos - oldPos;
 
             oldPos = nowPos;

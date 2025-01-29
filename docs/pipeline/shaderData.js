@@ -84,6 +84,11 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
         size: size,
         usage: GPUBufferUsage.STORAGE
     });
+    this.grid4Buffer = WebGPU.device.createBuffer({
+        label: "grid4 buffer",
+        size: size,
+        usage: GPUBufferUsage.STORAGE
+    });
 };
-SharedData.NUM_SPHERES = 300000;
+SharedData.NUM_SPHERES = 100000;
 SharedData.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space

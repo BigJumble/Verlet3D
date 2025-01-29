@@ -6,7 +6,7 @@ export class ComputeCollisions {
     static computeBindGroup: GPUBindGroup;
 
     static computeBindGroupLayout: GPUBindGroupLayout;
-    static positionsNextBuffer:GPUBuffer;
+    static positionsNextBuffer: GPUBuffer;
     static computeBindGroup2: GPUBindGroup;
     static computeBindGroupLayout2: GPUBindGroupLayout;
     static computePipeline2: GPUComputePipeline;
@@ -23,7 +23,7 @@ export class ComputeCollisions {
 
 
         this.computeBindGroupLayout = WebGPU.device.createBindGroupLayout({
-            label:"collision bind group layout",
+            label: "collision bind group layout",
             entries: [
                 {
                     binding: 0,
@@ -49,11 +49,12 @@ export class ComputeCollisions {
                     binding: 4,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "read-only-storage" }
-                },
+                }
+                ,
                 {
                     binding: 5,
                     visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
+                    buffer: { type: "read-only-storage" }
                 },
                 {
                     binding: 6,
@@ -62,6 +63,11 @@ export class ComputeCollisions {
                 },
                 {
                     binding: 7,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" }
+                },
+                {
+                    binding: 8,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" }
                 }
@@ -102,15 +108,19 @@ export class ComputeCollisions {
                 },
                 {
                     binding: 5,
+                    resource: { buffer: SharedData.grid4Buffer }
+                },
+                {
+                    binding: 6,
                     resource: { buffer: this.positionsNextBuffer }
                 }
                 ,
                 {
-                    binding: 6,
+                    binding: 7,
                     resource: { buffer: SharedData.colorIndexBuffer }
                 },
                 {
-                    binding: 7,
+                    binding: 8,
                     resource: { buffer: uniformBuffer }
                 }
             ]
@@ -128,7 +138,7 @@ export class ComputeCollisions {
             }
         });
 
-        
+
         this.computeBindGroupLayout2 = WebGPU.device.createBindGroupLayout({
             entries: [
                 {
@@ -137,19 +147,19 @@ export class ComputeCollisions {
                     buffer: { type: "storage" }
                 },
                 {
-                    binding: 5,
+                    binding: 6,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "storage" }
                 },
                 {
-                    binding: 7,
+                    binding: 8,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" }
                 }
             ]
         })
 
-                // Create compute bind group
+        // Create compute bind group
         this.computeBindGroup2 = WebGPU.device.createBindGroup({
             layout: this.computeBindGroupLayout2,
             entries: [
@@ -158,11 +168,11 @@ export class ComputeCollisions {
                     resource: { buffer: SharedData.spheresBuffer }
                 },
                 {
-                    binding: 5,
+                    binding: 6,
                     resource: { buffer: this.positionsNextBuffer }
                 },
                 {
-                    binding: 7,
+                    binding: 8,
                     resource: { buffer: uniformBuffer }
                 }
             ]
@@ -193,9 +203,10 @@ export class ComputeCollisions {
         @group(0) @binding(2) var<storage, read> grid1: array<u32>;
         @group(0) @binding(3) var<storage, read> grid2: array<u32>;
         @group(0) @binding(4) var<storage, read> grid3: array<u32>;  
-        @group(0) @binding(5) var<storage, read_write> positionsNext: array<f32>;
-        @group(0) @binding(6) var<storage, read_write> colors: array<u32>;
-        @group(0) @binding(7) var<uniform> uniforms: Uniforms;
+        @group(0) @binding(5) var<storage, read> grid4: array<u32>;  
+        @group(0) @binding(6) var<storage, read_write> positionsNext: array<f32>;
+        @group(0) @binding(7) var<storage, read_write> colors: array<u32>;
+        @group(0) @binding(8) var<uniform> uniforms: Uniforms;
         
         @compute @workgroup_size(256)
         fn copyPositions(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -332,8 +343,8 @@ export class ComputeCollisions {
         computePass2.setPipeline(this.computePipeline2);
         computePass2.setBindGroup(0, this.computeBindGroup2);
         computePass2.dispatchWorkgroups(Math.ceil(SharedData.NUM_SPHERES / 256));
-        computePass2.end();        
+        computePass2.end();
 
-        WebGPU.device.queue.submit([commandEncoder.finish(),commandEncoder2.finish()]);
+        WebGPU.device.queue.submit([commandEncoder.finish(), commandEncoder2.finish()]);
     }
 }

@@ -12,6 +12,7 @@ export class Orchestrator {
         ComputeGrid.init();
         ComputeCollisions.init();
         RenderSpheres.init();
+        // RenderBillboards.init();
     }
     static update(deltaTime) {
         if (PlayerController.paused)
@@ -24,10 +25,7 @@ export class Orchestrator {
         ComputeMovement.tick(deltaTime);
         ComputeGrid.tick();
         ComputeCollisions.tick();
-        ComputeGrid.tick();
-        ComputeCollisions.tick();
-        // ComputeGrid.tick();
-        // ComputeCollisions.tick();
+        // RenderBillboards.tick();
         RenderSpheres.tick();
     }
 }
