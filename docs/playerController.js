@@ -26,7 +26,7 @@ export class PlayerController {
             this.pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, this.pitch));
         }
         // Calculate movement direction in world space
-        const moveSpeed = 50 * deltaTime;
+        const moveSpeed = 5 * deltaTime;
         // Update position based on key input and rotation
         if (Controls.getKey('KeyW')) {
             this.position[0] -= moveSpeed * Math.sin(-this.yaw);
@@ -67,7 +67,8 @@ export class PlayerController {
         this.rotationMatrix = MatrixUtils.multiply(rotationY, rotationX);
         // this.scaleMatrix = MatrixUtils.scale(30, 30, 30);
         //  = MatrixUtils.multiply(this.rotationMatrix, translation);
-        // this.translationMatrix = MatrixUtils.multiply( this.translationMatrix, this.rotationMatrix);
+        this.viewMatrix = MatrixUtils.multiply(this.translationMatrix, this.rotationMatrix);
+        this.viewMatrix = MatrixUtils.multiply(this.viewMatrix, this.projectionMatrix);
     }
 }
 PlayerController.translationMatrix = MatrixUtils.identity();

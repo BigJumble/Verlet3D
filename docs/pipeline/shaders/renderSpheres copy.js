@@ -87,13 +87,12 @@ export class RenderSpheres {
             usage: GPUTextureUsage.RENDER_ATTACHMENT
         });
     }
-    static tick() {
+    static tick(commandEncoder) {
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.translationMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.rotationMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 128, PlayerController.projectionMatrix);
         WebGPU.device.queue.writeBuffer(this.uniformBuffer, 192, SharedData.lightDirection);
         const view = WebGPU.context.getCurrentTexture().createView();
-        const commandEncoder = WebGPU.device.createCommandEncoder();
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
                     view: view,
@@ -114,7 +113,6 @@ export class RenderSpheres {
         renderPass.setVertexBuffer(1, SharedData.colorIndexBuffer);
         renderPass.draw(3, SharedData.NUM_SPHERES, 0, 0);
         renderPass.end();
-        WebGPU.device.queue.submit([commandEncoder.finish()]);
     }
 }
 _a = RenderSpheres, _RenderSpheres_createRenderShader = function _RenderSpheres_createRenderShader() {
@@ -141,15 +139,18 @@ _a = RenderSpheres, _RenderSpheres_createRenderShader = function _RenderSpheres_
                         @location(6) @interpolate(flat) transformedCenter: vec3f
                     }
                     
-                    const colorPalette = array<vec3f, 6>(
+                    const colorPalette = array<vec3f, 10>(
                         vec3f(1.0, 1.0, 1.0),  // White
                         vec3f(0.0, 1.0, 0.0),  // Vibrant Green
                         vec3f(0.0, 0.0, 1.0),  // Vibrant Blue
                         vec3f(1.0, 1.0, 0.0),  // Vibrant Yellow
+                        vec3f(1.0, 0.5, 0.0),  // Red
+                        vec3f(0.2, 1.0, 1.0),  // Cyan
+                        vec3f(1.0, 0.0, 1.0),  // Magenta
+                        vec3f(0.5, 0.5, 0.5),  // Gray
                         vec3f(1.0, 0.0, 0.0),  // RED
-                        vec3f(0.2, 1.0, 1.0)   // Vibrant Cyan, HOW?
-                    );
-        
+                        vec3f(0.0, 0.0, 0.0)   // BLACK
+                    );        
                     struct FragmentOutput {
                         @location(0) color: vec4f,
                         @builtin(frag_depth) depth: f32

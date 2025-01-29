@@ -16,6 +16,8 @@ export class PlayerController {
     static lastMouseY = 0;
     static paused = false;
 
+    static viewMatrix: Float32Array;
+
     static init(): void {
         // Set initial mouse position
         this.lastMouseX = Controls.mousePosition.x;
@@ -31,24 +33,24 @@ export class PlayerController {
         const fov = Math.PI / 4;
         const near = 0.1;
         const far = 3000.0;
-        
+
         this.projectionMatrix = MatrixUtils.perspective(fov, aspect, near, far);
     }
 
     static update(deltaTime: number): void {
         // Handle mouse movement for rotation
         const mouseSensitivity = 0.002;
-        
+
         if (document.pointerLockElement) {
             this.yaw += Controls.mouseDelta.x * mouseSensitivity;
             this.pitch += Controls.mouseDelta.y * mouseSensitivity;
-            
+
             // Clamp pitch to prevent scene flipping
-            this.pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, this.pitch));
+            this.pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, this.pitch));
         }
 
         // Calculate movement direction in world space
-        const moveSpeed = 50 * deltaTime;
+        const moveSpeed = 5 * deltaTime;
         // Update position based on key input and rotation
         if (Controls.getKey('KeyW')) {
             this.position[0] -= moveSpeed * Math.sin(-this.yaw);
@@ -92,6 +94,7 @@ export class PlayerController {
         this.rotationMatrix = MatrixUtils.multiply(rotationY, rotationX);
         // this.scaleMatrix = MatrixUtils.scale(30, 30, 30);
         //  = MatrixUtils.multiply(this.rotationMatrix, translation);
-        // this.translationMatrix = MatrixUtils.multiply( this.translationMatrix, this.rotationMatrix);
+        this.viewMatrix = MatrixUtils.multiply(this.translationMatrix, this.rotationMatrix);
+        this.viewMatrix = MatrixUtils.multiply(this.viewMatrix, this.projectionMatrix);
     }
 }

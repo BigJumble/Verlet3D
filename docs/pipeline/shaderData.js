@@ -11,6 +11,17 @@ export class SharedData {
         __classPrivateFieldGet(this, _a, "m", _SharedData_initSphereBuffer).call(this);
         __classPrivateFieldGet(this, _a, "m", _SharedData_initColorInderBuffer).call(this);
         __classPrivateFieldGet(this, _a, "m", _SharedData_initAccelerationGrid).call(this);
+        this.resize();
+    }
+    static resize() {
+        if (this.depthTexture) {
+            this.depthTexture.destroy();
+        }
+        this.depthTexture = WebGPU.device.createTexture({
+            size: [WebGPU.canvas.width, WebGPU.canvas.height],
+            format: "depth24plus",
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
     }
 }
 _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereBuffer() {
@@ -18,22 +29,22 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
     const instanceData = new Float32Array(this.NUM_SPHERES * 3); // xyz for each instance
     for (let i = 0; i < this.NUM_SPHERES; i++) {
         const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]));
-        instanceData[i * 3] = dir[0] * Math.random() * 300; // x
-        instanceData[i * 3 + 1] = dir[1] * Math.random() * 300; // y
-        instanceData[i * 3 + 2] = dir[2] * Math.random() * 300; // z
+        instanceData[i * 3] = dir[0] * Math.random() * 30; // x
+        instanceData[i * 3 + 1] = dir[1] * Math.random() * 30; // y
+        instanceData[i * 3 + 2] = dir[2] * Math.random() * 30; // z
     }
-    // instanceData[0] = 0;
-    // instanceData[1] = -0.4;
-    // instanceData[2] = 0;
-    // instanceData[3] = 0;
-    // instanceData[4] = 0.4;
-    // instanceData[5] = 0;
-    // instanceData[6] = 0.4;
+    // instanceData[0] = 2;
+    // instanceData[1] = 2;
+    // instanceData[2] = 2;
+    // instanceData[3] = 2;
+    // instanceData[4] = 2;
+    // instanceData[5] = -2;
+    // instanceData[6] = 0;
     // instanceData[7] = 0;
     // instanceData[8] = 0;
-    // instanceData[9] = 0;
+    // instanceData[9] =  0;
     // instanceData[10] = 0;
-    // instanceData[11] = 0.4;
+    // instanceData[11] = 1;
     // console.log(instanceData.byteLength)
     this.spheresBuffer = WebGPU.device.createBuffer({
         size: instanceData.byteLength,
@@ -63,32 +74,21 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
     new Uint32Array(this.colorIndexBuffer.getMappedRange()).set(colorIndexData);
     this.colorIndexBuffer.unmap();
 }, _SharedData_initAccelerationGrid = function _SharedData_initAccelerationGrid() {
-    const size = 256 * 256 * 256 * 4; // 1/4 GB all 4 buffers
+    const size = 256 * 256 * 256 * 4 * 2; // 1/4 GB all 4 buffers
     this.atomicBuffer = WebGPU.device.createBuffer({
         label: "atomic buffer",
-        size: size,
+        size: size / 2, // cuz not vec4
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
     });
-    this.grid1Buffer = WebGPU.device.createBuffer({
-        label: "grid1 buffer",
-        size: size,
-        usage: GPUBufferUsage.STORAGE
-    });
-    this.grid2Buffer = WebGPU.device.createBuffer({
-        label: "grid2 buffer",
-        size: size,
-        usage: GPUBufferUsage.STORAGE
-    });
-    this.grid3Buffer = WebGPU.device.createBuffer({
-        label: "grid3 buffer",
-        size: size,
-        usage: GPUBufferUsage.STORAGE
-    });
-    this.grid4Buffer = WebGPU.device.createBuffer({
-        label: "grid4 buffer",
-        size: size,
-        usage: GPUBufferUsage.STORAGE
-    });
+    for (let i = 0; i < this.NUM_GRID_BUFFERS; i++) {
+        this.gridBuffers.push(WebGPU.device.createBuffer({
+            label: `grid${i} buffer`,
+            size: size,
+            usage: GPUBufferUsage.STORAGE
+        }));
+    }
 };
-SharedData.NUM_SPHERES = 100000;
+SharedData.NUM_SPHERES = 1000;
 SharedData.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
+SharedData.gridBuffers = [];
+SharedData.NUM_GRID_BUFFERS = 5;

@@ -61,19 +61,19 @@ export class ComputeMovement {
             }
         });
     }
-    static tick(deltaTime) {
+    static tick(deltaTime, commandEncoder) {
         WebGPU.device.queue.writeBuffer(this.computeUniformBuffer, 0, new Float32Array([
             deltaTime,
             SharedData.NUM_SPHERES
         ]));
-        const commandEncoder = WebGPU.device.createCommandEncoder();
+        // const commandEncoder = WebGPU.device.createCommandEncoder();
         // Compute pass
         const computePass = commandEncoder.beginComputePass();
         computePass.setPipeline(this.computePipeline);
         computePass.setBindGroup(0, this.computeBindGroup);
         computePass.dispatchWorkgroups(Math.ceil(SharedData.NUM_SPHERES / 256));
         computePass.end();
-        WebGPU.device.queue.submit([commandEncoder.finish()]);
+        // WebGPU.device.queue.submit([commandEncoder.finish()]);
     }
 }
 _a = ComputeMovement, _ComputeMovement_createComputeShader = function _ComputeMovement_createComputeShader() {
@@ -97,25 +97,22 @@ _a = ComputeMovement, _ComputeMovement_createComputeShader = function _ComputeMo
             var oldPos = vec3f(oldPositions[sphereID*3+0],oldPositions[sphereID*3+1],oldPositions[sphereID*3+2]);
             var nowPos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2]);
 
-            var gravityDir = -normalize(nowPos);
-            if (dot(nowPos,nowPos)>60*60)
+            var gravityDir = vec3f(0,0,0);
+            if (dot(nowPos, nowPos)>0)
             {
-                gravityDir*=1;
+                gravityDir=-normalize(nowPos);
             }
-            else if (dot(nowPos,nowPos)>50*50)
-            {
-                gravityDir*=0;
-            }
-            else
-            {
-                gravityDir*=-1;
-            }
+            // else
+            // // if (dot(nowPos, nowPos)<80*80)
+            // {
+            //     gravityDir = normalize(nowPos);
+            // }
 
             let velocity = nowPos - oldPos;
 
             oldPos = nowPos;
 
-            nowPos += velocity * 0.99;
+            nowPos += velocity*0.99;
 
             nowPos += gravityDir * 5 * 0.0166666 * 0.0166666;
             // nowPos *= 0.99;

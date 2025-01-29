@@ -10,51 +10,6 @@ export class ComputeGrid {
 
         const computeModule = this.#createComputeShader();
 
-        this.computeBindGroupLayout = WebGPU.device.createBindGroupLayout({
-            entries: [
-                {
-                    binding: 0,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 1,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 2,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 3,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 4,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 5,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                }
-                ,
-                {
-                    binding: 6,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 7,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "uniform" }
-                }
-            ]
-        })
 
         const uniformBuffer = WebGPU.device.createBuffer({
             size: 4,
@@ -63,6 +18,48 @@ export class ComputeGrid {
 
         WebGPU.device.queue.writeBuffer(uniformBuffer, 0, new Uint32Array([SharedData.NUM_SPHERES]));
 
+        this.computeBindGroupLayout = WebGPU.device.createBindGroupLayout({
+            label: "grid bind group layout",
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" as GPUBufferBindingType }
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" as GPUBufferBindingType }
+                },
+                ...SharedData.gridBuffers.map((buffer, index) => ({
+                    binding: index + 2,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" as GPUBufferBindingType }
+                })),
+                // {
+                //     binding: SharedData.NUM_GRID_BUFFERS + 2,
+                //     visibility: GPUShaderStage.COMPUTE,
+                //     buffer: { type: "storage" as GPUBufferBindingType }
+                // },
+                {
+                    binding: SharedData.NUM_GRID_BUFFERS + 3,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "uniform" as GPUBufferBindingType }
+                }
+            ]
+        })
+
+
+        this.computePipeline = WebGPU.device.createComputePipeline({
+            label: "Grid compute pipeline",
+            layout: WebGPU.device.createPipelineLayout({
+                bindGroupLayouts: [this.computeBindGroupLayout]
+            }),
+            compute: {
+                module: computeModule,
+                entryPoint: "computeMain"
+            }
+        });
         // Create compute bind group
         this.computeBindGroup = WebGPU.device.createBindGroup({
             layout: this.computeBindGroupLayout,
@@ -75,44 +72,22 @@ export class ComputeGrid {
                     binding: 1,
                     resource: { buffer: SharedData.atomicBuffer }
                 },
+                ...SharedData.gridBuffers.map((buffer, index) => ({
+                    binding: index + 2,
+                    resource: { buffer }
+                })),
+                // {
+                //     binding: SharedData.NUM_GRID_BUFFERS + 2,
+                //     resource: { buffer: SharedData.colorIndexBuffer }
+                // },
                 {
-                    binding: 2,
-                    resource: { buffer: SharedData.grid1Buffer }
-                },
-                {
-                    binding: 3,
-                    resource: { buffer: SharedData.grid2Buffer }
-                },
-                {
-                    binding: 4,
-                    resource: { buffer: SharedData.grid3Buffer }
-                },
-                {
-                    binding: 5,
-                    resource: { buffer: SharedData.grid4Buffer }
-                },
-                {
-                    binding: 6,
-                    resource: { buffer: SharedData.colorIndexBuffer }
-                },
-                {
-                    binding: 7,
+                    binding: SharedData.NUM_GRID_BUFFERS + 3,
                     resource: { buffer: uniformBuffer }
                 }
             ]
-        });
+        });        
+        
 
-        this.computePipeline = WebGPU.device.createComputePipeline({
-            label: "Grid compute pipeline",
-            layout: WebGPU.device.createPipelineLayout({
-                bindGroupLayouts: [this.computeBindGroupLayout]
-            }
-            ),
-            compute: {
-                module: computeModule,
-                entryPoint: "computeMain"
-            }
-        });
     }
 
     static #createComputeShader() {
@@ -123,12 +98,18 @@ export class ComputeGrid {
     
         @group(0) @binding(0) var<storage, read_write> positions: array<f32>;
         @group(0) @binding(1) var<storage, read_write> atomicCounter: array<atomic<u32>>;
-        @group(0) @binding(2) var<storage, read_write> grid1: array<u32>;
-        @group(0) @binding(3) var<storage, read_write> grid2: array<u32>;
-        @group(0) @binding(4) var<storage, read_write> grid3: array<u32>;   
-        @group(0) @binding(5) var<storage, read_write> grid4: array<u32>;    
-        @group(0) @binding(6) var<storage, read_write> colors: array<u32>;    
-        @group(0) @binding(7) var<uniform> uniforms: Uniforms;
+        @group(0) @binding(2) var<storage, read_write> grid1: array<vec2u>;
+        @group(0) @binding(3) var<storage, read_write> grid2: array<vec2u>;
+        @group(0) @binding(4) var<storage, read_write> grid3: array<vec2u>;   
+        @group(0) @binding(5) var<storage, read_write> grid4: array<vec2u>;    
+        @group(0) @binding(6) var<storage, read_write> grid5: array<vec2u>;    
+        // @group(0) @binding(7) var<storage, read_write> colors: array<atomic<u32>>;    
+        @group(0) @binding(8) var<uniform> uniforms: Uniforms;
+
+        fn frac_sign(x: f32) -> f32 {
+            let f = x - floor(x);  // Get fractional part
+            return select(1.0, -1.0, f < 0.5);
+        }
 
         @compute @workgroup_size(256)
         fn computeMain(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -137,48 +118,62 @@ export class ComputeGrid {
                 return;
             }
 
-            let spherePos = vec3i(vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2])+128);
+            let spherePos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2])+128;
+
             if(spherePos.x<0||spherePos.x>=256||spherePos.y<0||spherePos.y>=256||spherePos.z<0||spherePos.z>=256)
             {
                 return;
             }
 
-            let gridIndex = spherePos.x + spherePos.y * 256 + spherePos.z * 65536;
-
-            let index = atomicAdd(&atomicCounter[gridIndex], 1);
-            switch (index) {
-                case 0u:
-                {
-                    grid1[gridIndex] = sphereID;
-                    colors[sphereID] = 1u;
-                    break;
-                }
-                case 1u:
-                {
-                    grid2[gridIndex] = sphereID;
-                    colors[sphereID] = 2u;
-                    break;
-                }
-                case 2u:
-                {
-                    grid3[gridIndex] = sphereID;
-                    colors[sphereID] = 3u;
-                    break;
-                }
-                case 3u:
-                {
-                    grid4[gridIndex] = sphereID;
-                    colors[sphereID] = 4u;
-                    break;
-                }
-                default:
-                {
-                    colors[sphereID] = 5u; //cyan error or out of bounds
-                    //ignore sphere
-                    break;
+            let neighborOffsets = array<vec3f,8>(
+                vec3f(frac_sign(spherePos.x), 0.0, 0.0),
+                vec3f(frac_sign(spherePos.x), 0.0, frac_sign(spherePos.z)),
+                vec3f(frac_sign(spherePos.x), frac_sign(spherePos.y), 0.0),
+                vec3f(0.0, frac_sign(spherePos.y), 0.0),
+                vec3f(0.0, frac_sign(spherePos.y), frac_sign(spherePos.z)),
+                vec3f(0.0, 0.0, frac_sign(spherePos.z)),
+                vec3f(frac_sign(spherePos.x), frac_sign(spherePos.y), frac_sign(spherePos.z)),
+                vec3f(0,0,0)
+            );
+            for (var i = 0u; i < 8u; i++) {
+                let neighborPos = vec3i(spherePos+neighborOffsets[i]);
+        
+                // Check if the neighbor cell is within grid bounds
+                if (neighborPos.x >= 0 && neighborPos.x < 256 &&
+                    neighborPos.y >= 0 && neighborPos.y < 256 &&
+                    neighborPos.z >= 0 && neighborPos.z < 256) {
+        
+                    let gridIndex = neighborPos.x + neighborPos.y * 256 + neighborPos.z * 65536;
+                    let index = atomicAdd(&atomicCounter[gridIndex], 1);
+                    // atomicStore(&colors[sphereID], index);
+        
+                    switch (index / 2u) { 
+                        case 0u: {
+                            grid1[gridIndex][index % 2u] = sphereID; 
+                            break;
+                        }
+                        case 1u: {
+                            grid2[gridIndex][index % 2u] = sphereID; 
+                            break;
+                        }
+                        case 2u: {
+                            grid3[gridIndex][index % 2u] = sphereID; 
+                            break;
+                        }
+                        case 3u: {
+                            grid4[gridIndex][index % 2u] = sphereID; 
+                            break;
+                        }                             
+                        case 4u: {
+                            grid5[gridIndex][index % 2u] = sphereID; 
+                            break;
+                        }                        
+                        default: {
+                            break;
+                        }
+                    }
                 }
             }
-
         }
     `;
 
@@ -187,8 +182,8 @@ export class ComputeGrid {
             code: computeShaderCode
         });
     }
-    static tick() {
-        const commandEncoder = WebGPU.device.createCommandEncoder();
+    static tick(commandEncoder:GPUCommandEncoder) {
+        // const commandEncoder = WebGPU.device.createCommandEncoder();
 
         commandEncoder.clearBuffer(SharedData.atomicBuffer, 0, 256 * 256 * 256 * 4);
         // Compute pass
@@ -198,6 +193,6 @@ export class ComputeGrid {
         computePass.dispatchWorkgroups(Math.ceil(SharedData.NUM_SPHERES / 256));
         computePass.end();
 
-        WebGPU.device.queue.submit([commandEncoder.finish()]);
+        // WebGPU.device.queue.submit([commandEncoder.finish()]);
     }
 }
