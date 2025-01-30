@@ -21,7 +21,7 @@ export class Orchestrator
         // ComputeGrid3DT.init();
         ComputeCollisions.init();
         RenderSpheres.init();
-        RenderCube.init();
+        // RenderCube.init();
     }
     static update(deltaTime:number)
     {
@@ -36,8 +36,8 @@ export class Orchestrator
 
         ComputeMovement.tick(deltaTime,commandEncoder);
         ComputeGrid.tick(commandEncoder);
-        // ComputeGrid3DT.tick(commandEncoder);
         ComputeCollisions.tick(commandEncoder);
+
 
 
         const renderPass = commandEncoder.beginRenderPass({
@@ -55,7 +55,7 @@ export class Orchestrator
             }
         });
 
-        RenderCube.tick(renderPass);
+        // RenderCube.tick(renderPass);
         RenderSpheres.tick(renderPass);
 
         renderPass.end();

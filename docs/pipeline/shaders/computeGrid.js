@@ -121,57 +121,57 @@ _a = ComputeGrid, _ComputeGrid_createComputeShader = function _ComputeGrid_creat
                 return;
             }
 
-            let spherePos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2])+128;
+            let spherePos = vec3i(vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2])+128);
 
             if(spherePos.x<0||spherePos.x>=256||spherePos.y<0||spherePos.y>=256||spherePos.z<0||spherePos.z>=256)
             {
                 return;
             }
 
-            let neighborOffsets = array<vec3f,8>(
-                vec3f(frac_sign(spherePos.x), 0.0, 0.0),
-                vec3f(frac_sign(spherePos.x), 0.0, frac_sign(spherePos.z)),
-                vec3f(frac_sign(spherePos.x), frac_sign(spherePos.y), 0.0),
-                vec3f(0.0, frac_sign(spherePos.y), 0.0),
-                vec3f(0.0, frac_sign(spherePos.y), frac_sign(spherePos.z)),
-                vec3f(0.0, 0.0, frac_sign(spherePos.z)),
-                vec3f(frac_sign(spherePos.x), frac_sign(spherePos.y), frac_sign(spherePos.z)),
-                vec3f(0,0,0)
-            );
-            for (var i = 0u; i < 8u; i++) {
-                let neighborPos = vec3i(spherePos+neighborOffsets[i]);
+            // let neighborOffsets = array<vec3f,8>(
+            //     vec3f(frac_sign(spherePos.x), 0.0, 0.0),
+            //     vec3f(frac_sign(spherePos.x), 0.0, frac_sign(spherePos.z)),
+            //     vec3f(frac_sign(spherePos.x), frac_sign(spherePos.y), 0.0),
+            //     vec3f(0.0, frac_sign(spherePos.y), 0.0),
+            //     vec3f(0.0, frac_sign(spherePos.y), frac_sign(spherePos.z)),
+            //     vec3f(0.0, 0.0, frac_sign(spherePos.z)),
+            //     vec3f(frac_sign(spherePos.x), frac_sign(spherePos.y), frac_sign(spherePos.z)),
+            //     vec3f(0,0,0)
+            // );
+            // for (var i = 0u; i < 8u; i++) {
+            //     let neighborPos = vec3i(spherePos+neighborOffsets[i]);
         
-                // Check if the neighbor cell is within grid bounds
-                if (neighborPos.x >= 0 && neighborPos.x < 256 &&
-                    neighborPos.y >= 0 && neighborPos.y < 256 &&
-                    neighborPos.z >= 0 && neighborPos.z < 256) {
-        
-                    let gridIndex = neighborPos.x + neighborPos.y * 256 + neighborPos.z * 65536;
-                    let index = atomicAdd(&atomicCounter[gridIndex], 1);
-                    // atomicStore(&colors[sphereID], index);
-        
-                    switch (index / 2u) { 
-                        case 0u: {
-                            grid1[gridIndex][index % 2u] = sphereID; 
-                            break;
-                        }
-                        case 1u: {
-                            grid2[gridIndex][index % 2u] = sphereID; 
-                            break;
-                        }
-                        case 2u: {
-                            grid3[gridIndex][index % 2u] = sphereID; 
-                            break;
-                        }
-                        case 3u: {
-                            grid4[gridIndex][index % 2u] = sphereID; 
-                            break;
-                        }                                              
-                        default: {
-                            break;
-                        }
-                    }
+            //     // Check if the neighbor cell is within grid bounds
+            //     if (neighborPos.x >= 0 && neighborPos.x < 256 &&
+            //         neighborPos.y >= 0 && neighborPos.y < 256 &&
+            //         neighborPos.z >= 0 && neighborPos.z < 256) {
+            //let gridIndex = neighborPos.x + neighborPos.y * 256 + neighborPos.z * 65536;
+            let gridIndex = spherePos.x + spherePos.y * 256 + spherePos.z * 65536;
+            let index = atomicAdd(&atomicCounter[gridIndex], 1);
+            // atomicStore(&colors[sphereID], index);
+
+            switch (index / 2u) { 
+                case 0u: {
+                    grid1[gridIndex][index % 2u] = sphereID; 
+                    break;
                 }
+                case 1u: {
+                    grid2[gridIndex][index % 2u] = sphereID; 
+                    break;
+                }
+                case 2u: {
+                    grid3[gridIndex][index % 2u] = sphereID; 
+                    break;
+                }
+                case 3u: {
+                    grid4[gridIndex][index % 2u] = sphereID; 
+                    break;
+                }                                              
+                default: {
+                    break;
+                }
+                //     }
+                // }
             }
         }
     `;

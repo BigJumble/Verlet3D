@@ -29,9 +29,9 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
     const instanceData = new Float32Array(this.NUM_SPHERES * 3); // xyz for each instance
     for (let i = 0; i < this.NUM_SPHERES; i++) {
         const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]));
-        instanceData[i * 3] = dir[0] * Math.random() * 30; // x
-        instanceData[i * 3 + 1] = dir[1] * Math.random() * 30; // y
-        instanceData[i * 3 + 2] = dir[2] * Math.random() * 30; // z
+        instanceData[i * 3] = dir[0] * Math.random() * 100; // x
+        instanceData[i * 3 + 1] = dir[1] * Math.random() * 100; // y
+        instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
     }
     // instanceData[0] = 2;
     // instanceData[1] = 2;
@@ -88,7 +88,7 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
         }));
     }
 };
-SharedData.NUM_SPHERES = 1000;
+SharedData.NUM_SPHERES = 1000000;
 SharedData.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
 SharedData.gridBuffers = [];
 SharedData.NUM_GRID_BUFFERS = 4;

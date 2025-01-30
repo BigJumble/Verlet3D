@@ -5,7 +5,6 @@ import { ComputeCollisions } from "./shaders/computeCollisions.js";
 import { ComputeGrid } from "./shaders/computeGrid.js";
 // import { ComputeCos } from "./shaders/computeCos.js";
 import { ComputeMovement } from "./shaders/computeMovement.js";
-import { RenderCube } from "./shaders/renderGrid.js";
 import { RenderSpheres } from "./shaders/renderSpheres.js";
 export class Orchestrator {
     static init() {
@@ -15,7 +14,7 @@ export class Orchestrator {
         // ComputeGrid3DT.init();
         ComputeCollisions.init();
         RenderSpheres.init();
-        RenderCube.init();
+        // RenderCube.init();
     }
     static update(deltaTime) {
         if (PlayerController.paused)
@@ -27,7 +26,6 @@ export class Orchestrator {
         const commandEncoder = WebGPU.device.createCommandEncoder();
         ComputeMovement.tick(deltaTime, commandEncoder);
         ComputeGrid.tick(commandEncoder);
-        // ComputeGrid3DT.tick(commandEncoder);
         ComputeCollisions.tick(commandEncoder);
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
@@ -43,7 +41,7 @@ export class Orchestrator {
                 depthStoreOp: "store",
             }
         });
-        RenderCube.tick(renderPass);
+        // RenderCube.tick(renderPass);
         RenderSpheres.tick(renderPass);
         renderPass.end();
         WebGPU.device.queue.submit([commandEncoder.finish()]);

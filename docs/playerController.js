@@ -1,6 +1,13 @@
 import { WebGPU } from "./webgpu.js";
 import { Controls } from "./controls.js";
 import { MatrixUtils } from "./matrix.js";
+export var GravityMode;
+(function (GravityMode) {
+    GravityMode[GravityMode["None"] = 0] = "None";
+    GravityMode[GravityMode["Center"] = 1] = "Center";
+    GravityMode[GravityMode["Shell"] = 2] = "Shell";
+    GravityMode[GravityMode["Donut"] = 3] = "Donut";
+})(GravityMode || (GravityMode = {}));
 export class PlayerController {
     static init() {
         // Set initial mouse position
@@ -26,7 +33,7 @@ export class PlayerController {
             this.pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, this.pitch));
         }
         // Calculate movement direction in world space
-        const moveSpeed = 5 * deltaTime;
+        const moveSpeed = 50 * deltaTime;
         // Update position based on key input and rotation
         if (Controls.getKey('KeyW')) {
             this.position[0] -= moveSpeed * Math.sin(-this.yaw);
@@ -46,6 +53,7 @@ export class PlayerController {
         }
         if (Controls.getKey('Space')) {
             this.position[1] += moveSpeed; // Up
+            // console.log(Controls.pressedKeys);
         }
         if (Controls.getKey('ShiftLeft')) {
             this.position[1] -= moveSpeed; // Down
@@ -57,6 +65,18 @@ export class PlayerController {
         if (Controls.getKeyDown('KeyP')) {
             this.paused = true;
             document.exitPointerLock();
+        }
+        if (Controls.getKeyDown("Digit1")) {
+            this.gravityMode = GravityMode.None;
+        }
+        if (Controls.getKeyDown("Digit2")) {
+            this.gravityMode = GravityMode.Center;
+        }
+        if (Controls.getKeyDown("Digit3")) {
+            this.gravityMode = GravityMode.Shell;
+        }
+        if (Controls.getKeyDown("Digit4")) {
+            this.gravityMode = GravityMode.Donut;
         }
         // Create rotation matrices
         const rotationX = MatrixUtils.rotationX(this.pitch);
@@ -82,3 +102,4 @@ PlayerController.position = new Float32Array([0, 2, 10]); // Scene offset x, y, 
 PlayerController.lastMouseX = 0;
 PlayerController.lastMouseY = 0;
 PlayerController.paused = false;
+PlayerController.gravityMode = GravityMode.Center;

@@ -2,6 +2,13 @@ import { WebGPU } from "./webgpu.js";
 import { Controls } from "./controls.js";
 import { MatrixUtils } from "./matrix.js";
 
+export enum GravityMode {
+    None = 0,
+    Center = 1,
+    Shell = 2,
+    Donut = 3
+}
+
 export class PlayerController {
     static translationMatrix = MatrixUtils.identity();
     static rotationMatrix = MatrixUtils.identity();
@@ -17,6 +24,9 @@ export class PlayerController {
     static paused = false;
 
     static viewMatrix: Float32Array;
+
+
+    static gravityMode: GravityMode = GravityMode.Center;
 
     static init(): void {
         // Set initial mouse position
@@ -50,7 +60,7 @@ export class PlayerController {
         }
 
         // Calculate movement direction in world space
-        const moveSpeed = 5 * deltaTime;
+        const moveSpeed = 50 * deltaTime;
         // Update position based on key input and rotation
         if (Controls.getKey('KeyW')) {
             this.position[0] -= moveSpeed * Math.sin(-this.yaw);
@@ -70,6 +80,7 @@ export class PlayerController {
         }
         if (Controls.getKey('Space')) {
             this.position[1] += moveSpeed; // Up
+            // console.log(Controls.pressedKeys);
         }
         if (Controls.getKey('ShiftLeft')) {
             this.position[1] -= moveSpeed; // Down
@@ -81,8 +92,20 @@ export class PlayerController {
         if (Controls.getKeyDown('KeyP')) {
             this.paused = true;
             document.exitPointerLock();
-
         }
+        if (Controls.getKeyDown("Digit1")) {
+            this.gravityMode = GravityMode.None;
+        }
+        if (Controls.getKeyDown("Digit2")) {
+            this.gravityMode = GravityMode.Center;
+        }
+        if (Controls.getKeyDown("Digit3")) {
+            this.gravityMode = GravityMode.Shell;
+        }
+        if (Controls.getKeyDown("Digit4")) {
+            this.gravityMode = GravityMode.Donut;
+        }
+
 
         // Create rotation matrices
         const rotationX = MatrixUtils.rotationX(this.pitch);

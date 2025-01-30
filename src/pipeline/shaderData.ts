@@ -6,7 +6,7 @@ export class SharedData {
     static oldSpheresBuffer: GPUBuffer;
     static colorIndexBuffer: GPUBuffer;
 
-    static NUM_SPHERES = 1000;
+    static NUM_SPHERES = 1000000;
     static lightDirection: Float32Array = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
 
     static atomicBuffer: GPUBuffer;
@@ -40,9 +40,9 @@ export class SharedData {
         for (let i = 0; i < this.NUM_SPHERES; i++) {
             const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]))
 
-            instanceData[i * 3] = dir[0] * Math.random() * 30; // x
-            instanceData[i * 3 + 1] = dir[1] * Math.random() * 30 // y
-            instanceData[i * 3 + 2] = dir[2] * Math.random() * 30; // z
+            instanceData[i * 3] = dir[0] * Math.random() * 100; // x
+            instanceData[i * 3 + 1] = dir[1] * Math.random() * 100 // y
+            instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
         }
 
         // instanceData[0] = 2;

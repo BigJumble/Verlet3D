@@ -37,18 +37,18 @@ export class ComputeCollisions {
                 ...SharedData.gridBuffers.map((buffer, index) => ({
                     binding: index + 2,
                     visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" as GPUBufferBindingType }
+                    buffer: { type: "read-only-storage" as GPUBufferBindingType }
                 })),
                 {
                     binding: 10,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "storage" as GPUBufferBindingType }
                 },
-                // {
-                //     binding: SharedData.NUM_GRID_BUFFERS + 3,
-                //     visibility: GPUShaderStage.COMPUTE,
-                //     buffer: { type: "storage" as GPUBufferBindingType }
-                // },
+                {
+                    binding: 11,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "storage" as GPUBufferBindingType }
+                },
                 {
                     binding: 12,
                     visibility: GPUShaderStage.COMPUTE,
@@ -95,10 +95,10 @@ export class ComputeCollisions {
                     resource: { buffer: this.positionsNextBuffer }
                 }
                 ,
-                // {
-                //     binding: 11,
-                //     resource: { buffer: SharedData.colorIndexBuffer }
-                // },
+                {
+                    binding: 11,
+                    resource: { buffer: SharedData.colorIndexBuffer }
+                },
                 {
                     binding: 12,
                     resource: { buffer: uniformBuffer }
@@ -171,13 +171,13 @@ export class ComputeCollisions {
 
         @group(0) @binding(0) var<storage, read_write> positions: array<f32>;
         @group(0) @binding(1) var<storage, read> atomicCounter: array<u32>;
-        @group(0) @binding(2) var<storage, read_write> grid1: array<vec2u>;
-        @group(0) @binding(3) var<storage, read_write> grid2: array<vec2u>;
-        @group(0) @binding(4) var<storage, read_write> grid3: array<vec2u>;   
-        @group(0) @binding(5) var<storage, read_write> grid4: array<vec2u>;    
+        @group(0) @binding(2) var<storage, read> grid1: array<vec2u>;
+        @group(0) @binding(3) var<storage, read> grid2: array<vec2u>;
+        @group(0) @binding(4) var<storage, read> grid3: array<vec2u>;   
+        @group(0) @binding(5) var<storage, read> grid4: array<vec2u>;    
         // @group(0) @binding(6) var<storage, read_write> grid5: array<vec2u>;    
         @group(0) @binding(10) var<storage, read_write> positionsNext: array<f32>;
-        // @group(0) @binding(11) var<storage, read_write> colors: array<u32>;
+        @group(0) @binding(11) var<storage, read_write> colors: array<u32>;
         @group(0) @binding(12) var<uniform> uniforms: Uniforms;
         
         @compute @workgroup_size(256)
@@ -199,7 +199,13 @@ export class ComputeCollisions {
             i = 0x5F3759DF - (i >> 1);      // Magic number and shift
             y = bitcast<f32>(i);            // Reinterpret int as float
             y = y * (threehalfs - (0.5 * x * y * y));  // One iteration of Newton's method
+            y = y * (threehalfs - (0.5 * x * y * y));  // 2nd iteration of Newton's method
             return y;
+        }
+
+        fn frac_sign(x: f32) -> i32 {
+            let f = x - floor(x);  // Get fractional part
+            return select(1, -1, f < 0.5);
         }
 
         @compute @workgroup_size(256)
@@ -211,7 +217,7 @@ export class ComputeCollisions {
             var myPos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2]);
 
 
-            // colors[sphereID] = 0u;
+            colors[sphereID] = 0u;
             let spherePos = vec3i(myPos+128);
             if(spherePos.x<0||spherePos.x>=256||spherePos.y<0||spherePos.y>=256||spherePos.z<0||spherePos.z>=256)
             {
@@ -220,63 +226,90 @@ export class ComputeCollisions {
                 positionsNext[sphereID*3+2] = myPos.z;
                 return;
             }
-            let gridIndex = spherePos.x + spherePos.y * 256 + spherePos.z * 65536;
-            
+            let gridIndex2 = spherePos.x + spherePos.y * 256 + spherePos.z * 65536;
+            // colors[sphereID] = atomicCounter[gridIndex2];
 
-            var posCorrection = vec3f(0,0,0);
-            let numSpheres = atomicCounter[gridIndex];
+            let neighborOffsets = array<vec3i,8>(
+                vec3i(frac_sign(myPos.x), 0, 0),
+                vec3i(frac_sign(myPos.x), 0, frac_sign(myPos.z)),
+                vec3i(frac_sign(myPos.x), frac_sign(myPos.y), 0),
+                vec3i(0, frac_sign(myPos.y), 0),
+                vec3i(0, frac_sign(myPos.y), frac_sign(myPos.z)),
+                vec3i(0, 0, frac_sign(myPos.z)),
+                vec3i(frac_sign(myPos.x), frac_sign(myPos.y), frac_sign(myPos.z)),
+                vec3i(0,0,0)
+            );
+
             var countCollisions = 0u;
+            var posCorrection = vec3f(0,0,0);
+
             let spherePosF = vec3f(
                 positions[sphereID*3+0],
                 positions[sphereID*3+1],
                 positions[sphereID*3+2]
             );
-            var otherSphereID: u32;
-            for (var i = 0u; i < numSpheres; i++) {
-                switch(i / 2u) {
-                    case 0u: {
-                        otherSphereID = grid1[gridIndex][i%2]; break;
-                    }
-                    case 1u: {
-                        otherSphereID = grid2[gridIndex][i%2]; break;
-                    }
-                    case 2u: {
-                        otherSphereID = grid3[gridIndex][i%2]; break;
-                    }
-                    case 3u: {
-                        otherSphereID = grid4[gridIndex][i%2]; break;
-                    }      
-                  
-                    default: {
-                        return;
-                    }
-                }
-                // colors[sphereID] = atomicCounter[gridIndex];
-                if (otherSphereID != sphereID) {
 
-                    let otherPos = vec3f(
-                        positions[otherSphereID*3+0],
-                        positions[otherSphereID*3+1],
-                        positions[otherSphereID*3+2]
-                    );
+            for (var i = 0u; i < 8u; i++) {
+                // if(countCollisions>=16) {break;}
+                let neighborPos = vec3i(spherePos+neighborOffsets[i]);
+        
+                // Check if the neighbor cell is within grid bounds
+                if (neighborPos.x >= 0 && neighborPos.x < 256 &&
+                    neighborPos.y >= 0 && neighborPos.y < 256 &&
+                    neighborPos.z >= 0 && neighborPos.z < 256) {
 
-                    let diff = spherePosF - otherPos;
-                    var dist = dot(diff,diff);
-                    countCollisions+=1;
-                    if (dist < 1) {
+                    let gridIndex = u32(neighborPos.x + neighborPos.y * 256 + neighborPos.z * 65536);
 
+                    let numSpheres = min(atomicCounter[gridIndex], 8);
+
+
+                    var otherSphereID: u32;
+                    for (var i = 0u; i < numSpheres; i++) {
+                        switch(i / 2u) {
+                            case 0u: {
+                                otherSphereID = grid1[gridIndex][i%2]; break;
+                            }
+                            case 1u: {
+                                otherSphereID = grid2[gridIndex][i%2]; break;
+                            }
+                            case 2u: {
+                                otherSphereID = grid3[gridIndex][i%2]; break;
+                            }
+                            case 3u: {
+                                otherSphereID = grid4[gridIndex][i%2]; break;
+                            }      
                         
-                        dist = fast_inversesqrt(dist);
-                        let normal = diff * dist;
-                        let correction = (1.0 - (1/dist))*0.5;
-                        posCorrection.x += normal.x * correction;
-                        posCorrection.y += normal.y * correction;
-                        posCorrection.z += normal.z * correction;
+                            default: {
+                                return;
+                            }
+                        }
+                        
+                        if (otherSphereID != sphereID) {
+
+                            let otherPos = vec3f(
+                                positions[otherSphereID*3+0],
+                                positions[otherSphereID*3+1],
+                                positions[otherSphereID*3+2]
+                            );
+
+                            let diff = spherePosF - otherPos;
+                            var dist = dot(diff,diff);
+                            
+                            if (dist < 1) {
+                                countCollisions+=1;
+                                dist = sqrt(dist);
+                                let normal = diff / dist;
+                                let correction =  (1.0 - dist)*0.5;
+                                posCorrection.x += normal.x * correction;
+                                posCorrection.y += normal.y * correction;
+                                posCorrection.z += normal.z * correction;
+                            }
+                        }
                     }
                 }
             }
-            // colors[sphereID] = countCollisions;
-            posCorrection *= 0.5;
+            colors[sphereID] = min(countCollisions,15);
+            posCorrection *= 0.125;
             positionsNext[sphereID*3+0] = myPos.x + posCorrection.x;
             positionsNext[sphereID*3+1] = myPos.y + posCorrection.y;
             positionsNext[sphereID*3+2] = myPos.z + posCorrection.z;

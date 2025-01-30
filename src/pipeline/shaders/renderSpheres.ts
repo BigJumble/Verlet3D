@@ -120,19 +120,24 @@ export class RenderSpheres {
                         @location(6) @interpolate(flat) transformedCenter: vec3f
                     }
                     
-                    const colorPalette = array<vec3f, 10>(
+                    const colorPalette = array<vec3f, 16>(
                         vec3f(1.0, 1.0, 1.0),  // White
                         vec3f(0.0, 1.0, 0.0),  // Vibrant Green
                         vec3f(0.0, 0.0, 1.0),  // Vibrant Blue
                         vec3f(1.0, 1.0, 0.0),  // Vibrant Yellow
-                        vec3f(1.0, 0.5, 0.0),  // orange
+                        vec3f(1.0, 0.5, 0.0),  // Orange
                         vec3f(0.2, 1.0, 1.0),  // Cyan
                         vec3f(1.0, 0.0, 1.0),  // Magenta
-                        vec3f(0.5, 0.5, 0.5),  // Gray
-                        vec3f(1.0, 0.0, 0.0),  // RED
-                        vec3f(0.0, 0.0, 0.0)   // BLACK
-                    );        
-                    struct FragmentOutput {
+                        vec3f(0.8, 0.8, 0.8),  // Light Gray
+                        vec3f(0.5, 0.5, 0.5),  // Medium Gray
+                        vec3f(0.3, 0.3, 0.3),  // Dark Gray
+                        vec3f(1.0, 0.0, 0.0),  // Bright Red
+                        vec3f(0.8, 0.0, 0.0),  // Medium Red
+                        vec3f(0.6, 0.0, 0.0),  // Dark Red
+                        vec3f(0.4, 0.0, 0.0),  // Darker Red
+                        vec3f(0.2, 0.0, 0.0),  // Very Dark Red
+                        vec3f(0.0, 0.0, 0.0)   // Black
+                    );                    struct FragmentOutput {
                         @location(0) color: vec4f,
                         // @builtin(frag_depth) depth: f32
                     }
@@ -168,7 +173,7 @@ export class RenderSpheres {
                         let right = normalize(cross(up, toCamera));
                         let adjustedUp = normalize(cross(toCamera, right));
                         
-                        localPos = localPos * 3.464101615137754 * 0.1; // Scale manually as needed
+                        localPos = localPos * 3.464101615137754 * 0.5; // Scale manually as needed
                         
                         // Apply billboard rotation to local position
                         localPos = right * localPos.x + adjustedUp * localPos.y + toCamera * localPos.z;

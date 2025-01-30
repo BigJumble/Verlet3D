@@ -1,3 +1,4 @@
+import { PlayerController } from "../../playerController.js";
 import { WebGPU } from "../../webgpu.js";
 import { SharedData } from "../shaderData.js";
 
@@ -11,7 +12,7 @@ export class ComputeMovement {
     static init() {
         // Create compute uniform buffer
         this.computeUniformBuffer = WebGPU.device.createBuffer({
-            size: 8, // 3 floats: time, amplitude, frequency
+            size: 12, // 3 floats: time, amplitude, frequency
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         const computeModule = this.#createComputeShader();
@@ -71,7 +72,8 @@ export class ComputeMovement {
         const computeShaderCode = /*wgsl*/`
         struct Uniforms {
             time: f32,
-            numSpheres: u32
+            numSpheres: u32,
+            gravityMode: u32,
         }
     
         @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -88,24 +90,52 @@ export class ComputeMovement {
             var oldPos = vec3f(oldPositions[sphereID*3+0],oldPositions[sphereID*3+1],oldPositions[sphereID*3+2]);
             var nowPos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2]);
 
-            var gravityDir = vec3f(0,0,0);
-            if (dot(nowPos, nowPos)>0)
+            var gravityDir = vec3f(0,0,0);// -normalize(nowPos);
+            switch (uniforms.gravityMode)
             {
-                gravityDir=-normalize(nowPos);
+                case 0u: {
+                    gravityDir = vec3f(0.0, 0.0, 0.0);
+                    break;
+                }
+                case 1u: {
+                    gravityDir = -normalize(nowPos);
+                    break;
+                }
+                case 2u: {
+                    let distSq = dot(nowPos, nowPos);
+                    if (distSq > 100.0 * 100.0) {
+                        gravityDir = -normalize(nowPos);
+                    } else if (distSq < 95.0 * 95.0) {
+                        gravityDir = normalize(nowPos);
+                    }
+                    break;
+                }
+                case 3u: {
+                    let noY = vec3f(nowPos.x,0,nowPos.z);
+                    let distSq = dot(noY, noY);
+                    if (distSq > 100.0 * 100.0) {
+                        gravityDir = -normalize(noY);
+                    } else if (distSq < 95.0 * 95.0) {
+                        gravityDir = normalize(noY);
+                    }
+                    gravityDir.y =sign(-nowPos.y);
+                    gravityDir = normalize(gravityDir);
+                    break;
+                }
+                default: {
+                    gravityDir = vec3f(0.0, 0.0, 0.0);
+                    break;
+                }
+                
             }
-            // else
-            // // if (dot(nowPos, nowPos)<80*80)
-            // {
-            //     gravityDir = normalize(nowPos);
-            // }
 
             let velocity = nowPos - oldPos;
 
             oldPos = nowPos;
 
-            nowPos += velocity*0.99;
+            nowPos += velocity * 0.99;
 
-            nowPos += gravityDir * 5 * 0.0166666 * 0.0166666;
+            nowPos += gravityDir * 0.0013888888888;
             // nowPos *= 0.99;
 
             oldPositions[sphereID*3+0] = oldPos.x;
@@ -127,9 +157,12 @@ export class ComputeMovement {
     static tick(deltaTime: number, commandEncoder:GPUCommandEncoder) {
         WebGPU.device.queue.writeBuffer(this.computeUniformBuffer, 0, new Float32Array([
             deltaTime,
-            SharedData.NUM_SPHERES
+            SharedData.NUM_SPHERES,
         ]));
-
+        WebGPU.device.queue.writeBuffer(this.computeUniformBuffer, 8, new Uint32Array([
+            PlayerController.gravityMode
+        ]));
+        // console.log(PlayerController.gravityMode)
         // const commandEncoder = WebGPU.device.createCommandEncoder();
 
         // Compute pass
