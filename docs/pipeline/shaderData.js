@@ -91,4 +91,4 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
 SharedData.NUM_SPHERES = 1000;
 SharedData.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
 SharedData.gridBuffers = [];
-SharedData.NUM_GRID_BUFFERS = 5;
+SharedData.NUM_GRID_BUFFERS = 4;

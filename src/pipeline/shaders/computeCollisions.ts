@@ -40,7 +40,7 @@ export class ComputeCollisions {
                     buffer: { type: "storage" as GPUBufferBindingType }
                 })),
                 {
-                    binding: SharedData.NUM_GRID_BUFFERS + 2,
+                    binding: 10,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "storage" as GPUBufferBindingType }
                 },
@@ -50,7 +50,7 @@ export class ComputeCollisions {
                 //     buffer: { type: "storage" as GPUBufferBindingType }
                 // },
                 {
-                    binding: SharedData.NUM_GRID_BUFFERS + 4,
+                    binding: 12,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" as GPUBufferBindingType }
                 }
@@ -91,16 +91,16 @@ export class ComputeCollisions {
                     resource: { buffer }
                 })),
                 {
-                    binding: SharedData.NUM_GRID_BUFFERS + 2,
+                    binding: 10,
                     resource: { buffer: this.positionsNextBuffer }
                 }
                 ,
                 // {
-                //     binding: SharedData.NUM_GRID_BUFFERS + 3,
+                //     binding: 11,
                 //     resource: { buffer: SharedData.colorIndexBuffer }
                 // },
                 {
-                    binding: SharedData.NUM_GRID_BUFFERS + 4,
+                    binding: 12,
                     resource: { buffer: uniformBuffer }
                 }
             ]
@@ -117,12 +117,12 @@ export class ComputeCollisions {
                     buffer: { type: "storage" }
                 },
                 {
-                    binding: SharedData.NUM_GRID_BUFFERS + 2,
+                    binding: 10,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "storage" }
                 },
                 {
-                    binding: SharedData.NUM_GRID_BUFFERS + 4,
+                    binding: 12,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" }
                 }
@@ -149,11 +149,11 @@ export class ComputeCollisions {
                     resource: { buffer: SharedData.spheresBuffer }
                 },
                 {
-                    binding: SharedData.NUM_GRID_BUFFERS + 2,
+                    binding: 10,
                     resource: { buffer: this.positionsNextBuffer }
                 },
                 {
-                    binding: SharedData.NUM_GRID_BUFFERS + 4,
+                    binding: 12,
                     resource: { buffer: uniformBuffer }
                 }
             ]
@@ -175,10 +175,10 @@ export class ComputeCollisions {
         @group(0) @binding(3) var<storage, read_write> grid2: array<vec2u>;
         @group(0) @binding(4) var<storage, read_write> grid3: array<vec2u>;   
         @group(0) @binding(5) var<storage, read_write> grid4: array<vec2u>;    
-        @group(0) @binding(6) var<storage, read_write> grid5: array<vec2u>;    
-        @group(0) @binding(7) var<storage, read_write> positionsNext: array<f32>;
-        // @group(0) @binding(8) var<storage, read_write> colors: array<u32>;
-        @group(0) @binding(9) var<uniform> uniforms: Uniforms;
+        // @group(0) @binding(6) var<storage, read_write> grid5: array<vec2u>;    
+        @group(0) @binding(10) var<storage, read_write> positionsNext: array<f32>;
+        // @group(0) @binding(11) var<storage, read_write> colors: array<u32>;
+        @group(0) @binding(12) var<uniform> uniforms: Uniforms;
         
         @compute @workgroup_size(256)
         fn copyPositions(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -246,9 +246,7 @@ export class ComputeCollisions {
                     case 3u: {
                         otherSphereID = grid4[gridIndex][i%2]; break;
                     }      
-                    case 4u: {
-                        otherSphereID = grid5[gridIndex][i%2]; break;
-                    }                    
+                  
                     default: {
                         return;
                     }

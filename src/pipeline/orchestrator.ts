@@ -3,6 +3,7 @@ import { WebGPU } from "../webgpu.js";
 import { SharedData } from "./shaderData.js";
 import { ComputeCollisions } from "./shaders/computeCollisions.js";
 import { ComputeGrid } from "./shaders/computeGrid.js";
+import { ComputeGrid3DT } from "./shaders/computeGrid3DT.js";
 // import { ComputeCos } from "./shaders/computeCos.js";
 import { ComputeMovement } from "./shaders/computeMovement.js";
 import { RenderBillboards } from "./shaders/renderBillboards.js";
@@ -17,6 +18,7 @@ export class Orchestrator
         SharedData.init();
         ComputeMovement.init();
         ComputeGrid.init();
+        // ComputeGrid3DT.init();
         ComputeCollisions.init();
         RenderSpheres.init();
         RenderCube.init();
@@ -34,6 +36,7 @@ export class Orchestrator
 
         ComputeMovement.tick(deltaTime,commandEncoder);
         ComputeGrid.tick(commandEncoder);
+        // ComputeGrid3DT.tick(commandEncoder);
         ComputeCollisions.tick(commandEncoder);
 
 

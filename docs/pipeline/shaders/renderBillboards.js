@@ -216,6 +216,6 @@ _a = RenderBillboards, _RenderBillboards_createRenderShader = function _RenderBi
                 return vec4f(color, 1.0);
             }
         
-                    `
+            `
     });
 };

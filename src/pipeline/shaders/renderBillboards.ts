@@ -79,7 +79,7 @@ export class RenderBillboards {
                 format: "depth24plus"
             }
         });
-        
+
         this.resize();
     }
 
@@ -194,7 +194,7 @@ export class RenderBillboards {
                 return vec4f(color, 1.0);
             }
         
-                    `
+            `
         });
 
     }
@@ -229,7 +229,7 @@ export class RenderBillboards {
         renderPass.setVertexBuffer(0, SharedData.spheresBuffer);
         renderPass.setVertexBuffer(1, SharedData.colorIndexBuffer);
 
-        renderPass.draw(3, SharedData.NUM_SPHERES, 0, 0); 
+        renderPass.draw(3, SharedData.NUM_SPHERES, 0, 0);
         renderPass.end();
 
         WebGPU.device.queue.submit([commandEncoder.finish()]);

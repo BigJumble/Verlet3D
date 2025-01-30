@@ -11,7 +11,7 @@ export class SharedData {
 
     static atomicBuffer: GPUBuffer;
     static gridBuffers: GPUBuffer[] = [];
-    static NUM_GRID_BUFFERS = 5;
+    static NUM_GRID_BUFFERS = 4;
 
     static depthTexture: GPUTexture;
 

@@ -12,6 +12,7 @@ export class Orchestrator {
         SharedData.init();
         ComputeMovement.init();
         ComputeGrid.init();
+        // ComputeGrid3DT.init();
         ComputeCollisions.init();
         RenderSpheres.init();
         RenderCube.init();
@@ -26,6 +27,7 @@ export class Orchestrator {
         const commandEncoder = WebGPU.device.createCommandEncoder();
         ComputeMovement.tick(deltaTime, commandEncoder);
         ComputeGrid.tick(commandEncoder);
+        // ComputeGrid3DT.tick(commandEncoder);
         ComputeCollisions.tick(commandEncoder);
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
