@@ -108,58 +108,6 @@ export class ComputeCollisions {
 
 
 
-
-        this.computeBindGroupLayout2 = WebGPU.device.createBindGroupLayout({
-            entries: [
-                {
-                    binding: 0,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 10,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                {
-                    binding: 12,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "uniform" }
-                }
-            ]
-        })
-
-        this.computePipeline2 = WebGPU.device.createComputePipeline({
-            label: "Collisions Copy compute pipeline",
-            layout: WebGPU.device.createPipelineLayout({
-                    bindGroupLayouts: [this.computeBindGroupLayout2]
-            }),
-            compute: {
-                module: computeModule,
-                entryPoint: "copyPositions"
-            }
-        });
-        // Create compute bind group
-        this.computeBindGroup2 = WebGPU.device.createBindGroup({
-            label: 'ComputeBindGroup 2',
-            layout: this.computeBindGroupLayout2,
-            entries: [
-                {
-                    binding: 0,
-                    resource: { buffer: SharedData.spheresBuffer }
-                },
-                {
-                    binding: 10,
-                    resource: { buffer: this.positionsNextBuffer }
-                },
-                {
-                    binding: 12,
-                    resource: { buffer: uniformBuffer }
-                }
-            ]
-        });
-
-
     }
 
     static #createComputeShader() {
@@ -179,18 +127,7 @@ export class ComputeCollisions {
         @group(0) @binding(10) var<storage, read_write> positionsNext: array<f32>;
         @group(0) @binding(11) var<storage, read_write> colors: array<u32>;
         @group(0) @binding(12) var<uniform> uniforms: Uniforms;
-        
-        @compute @workgroup_size(256)
-        fn copyPositions(@builtin(global_invocation_id) global_id: vec3<u32>) {
-            let index = global_id.x;
-            if (index >= uniforms.numSpheres) {
-                return;
-            }
-            
-            positions[index*3+0] = positionsNext[index*3+0];
-            positions[index*3+1] = positionsNext[index*3+1];
-            positions[index*3+2] = positionsNext[index*3+2];
-        }
+    
         
         fn fast_inversesqrt(x: f32) -> f32 {
             let threehalfs: f32 = 1.5;
@@ -323,7 +260,7 @@ export class ComputeCollisions {
         });
     }
 
-    static tick(commandEncoder:GPUCommandEncoder) {
+    static tick(commandEncoder: GPUCommandEncoder) {
         // const commandEncoder = WebGPU.device.createCommandEncoder();
 
         // Compute pass
@@ -333,13 +270,6 @@ export class ComputeCollisions {
         computePass.dispatchWorkgroups(Math.ceil(SharedData.NUM_SPHERES / 256));
         computePass.end();
 
-        // const commandEncoder2 = WebGPU.device.createCommandEncoder();
-        const computePass2 = commandEncoder.beginComputePass();
-        computePass2.setPipeline(this.computePipeline2);
-        computePass2.setBindGroup(0, this.computeBindGroup2);
-        computePass2.dispatchWorkgroups(Math.ceil(SharedData.NUM_SPHERES / 256));
-        computePass2.end();
-
-        // WebGPU.device.queue.submit([commandEncoder.finish(), commandEncoder2.finish()]);
+        commandEncoder.copyBufferToBuffer(this.positionsNextBuffer, 0, SharedData.spheresBuffer, 0, SharedData.NUM_SPHERES * 3 * 4);
     }
 }

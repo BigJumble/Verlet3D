@@ -6,7 +6,7 @@ export class SharedData {
     static oldSpheresBuffer: GPUBuffer;
     static colorIndexBuffer: GPUBuffer;
 
-    static NUM_SPHERES = 400000;
+    static NUM_SPHERES = 2000000;
     static lightDirection: Float32Array = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
 
     static atomicBuffer: GPUBuffer;
