@@ -1,5 +1,8 @@
+import { MatrixUtils } from "../matrix.js";
+import { cube } from "../models/cube.js";
 import { PlayerController } from "../playerController.js";
 import { WebGPU } from "../webgpu.js";
+import { GameObject } from "./gameobject.js";
 import { SharedData } from "./shaderData.js";
 import { ComputeCollisions } from "./shaders/computeCollisions.js";
 import { ComputeGrid } from "./shaders/computeGrid.js";
@@ -15,6 +18,16 @@ export class Orchestrator {
         ComputeCollisions.init();
         RenderSpheres.init();
         // RenderCube.init();
+        // let transform = MatrixUtils.identity();
+        // transform = MatrixUtils.multiply(transform, MatrixUtils.rotationY(Math.PI/2));
+        // transform = MatrixUtils.multiply(transform, MatrixUtils.translation(10,0,0));
+        for (let x = 0; x < 10; x++) {
+            for (let y = 0; y < 10; y++) {
+                for (let z = 0; z < 10; z++) {
+                    this.objects.push(new GameObject(cube, MatrixUtils.translation(x * 10, y * 10, z * 10)));
+                }
+            }
+        }
     }
     static update(deltaTime) {
         if (PlayerController.paused)
@@ -48,3 +61,4 @@ export class Orchestrator {
     }
 }
 Orchestrator.resized = false;
+Orchestrator.objects = [];

@@ -21,6 +21,17 @@ export class MatrixUtils {
         }
         return result;
     }
+    // Multiplies a 4x4 matrix with a vector4
+    static multiplyVec4(matrix, vec) {
+        matrix = this.transpose(matrix);
+        const result = new Float32Array(4);
+        for (let row = 0; row < 4; row++) {
+            for (let col = 0; col < 4; col++) {
+                result[row] += matrix[row * 4 + col] * vec[col];
+            }
+        }
+        return result;
+    }
     // Creates a translation matrix
     static translation(tx, ty, tz) {
         return new Float32Array([

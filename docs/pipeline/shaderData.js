@@ -33,18 +33,6 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
         instanceData[i * 3 + 1] = dir[1] * Math.random() * 100; // y
         instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
     }
-    // instanceData[0] = 2;
-    // instanceData[1] = 2;
-    // instanceData[2] = 2;
-    // instanceData[3] = 2;
-    // instanceData[4] = 2;
-    // instanceData[5] = -2;
-    // instanceData[6] = 0;
-    // instanceData[7] = 0;
-    // instanceData[8] = 0;
-    // instanceData[9] =  0;
-    // instanceData[10] = 0;
-    // instanceData[11] = 1;
     // console.log(instanceData.byteLength)
     this.spheresBuffer = WebGPU.device.createBuffer({
         size: instanceData.byteLength,
