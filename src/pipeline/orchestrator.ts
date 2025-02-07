@@ -3,6 +3,7 @@ import { cube } from "../models/cube.js";
 import { PlayerController } from "../playerController.js";
 import { WebGPU } from "../webgpu.js";
 import { GameObject } from "./gameobject.js";
+import { Scene } from "./scene.js";
 import { SharedData } from "./shaderData.js";
 import { ComputeCollisions } from "./shaders/computeCollisions.js";
 import { ComputeGrid } from "./shaders/computeGrid.js";
@@ -15,28 +16,21 @@ import { RenderSpheres } from "./shaders/renderSpheres.js";
 
 export class Orchestrator {
     static resized = false;
-    static objects: GameObject[] = [];
+
 
     static init() {
+        Scene.loadScene0();
         SharedData.init();
+        SharedData.loadSceneToBuffers(Scene.objects);
+
         ComputeMovement.init();
         ComputeGrid.init();
-        // ComputeGrid3DT.init();
         ComputeCollisions.init();
         RenderSpheres.init();
         // RenderCube.init();
 
-        // let transform = MatrixUtils.identity();
-        // transform = MatrixUtils.multiply(transform, MatrixUtils.rotationY(Math.PI/2));
-        // transform = MatrixUtils.multiply(transform, MatrixUtils.translation(10,0,0));
-        for (let x = 0; x < 10; x++) {
-            for (let y = 0; y < 10; y++) {
-                for (let z = 0; z < 10; z++) {
-                    this.objects.push(new GameObject(cube, MatrixUtils.translation(x*10, y*10, z*10)));
-                }
-            }
-        }
-        
+
+
 
     }
     static update(deltaTime: number) {
@@ -45,6 +39,7 @@ export class Orchestrator {
             SharedData.resize();
             this.resized = false;
         }
+        if (SharedData.NUM_SPHERES === 0) return;
 
         const commandEncoder = WebGPU.device.createCommandEncoder();
 

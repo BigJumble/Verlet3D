@@ -7,6 +7,8 @@ export class GameObject {
         this.connectionDistanceBuffers = [];
         this.connectionBufferSizes = [];
         this.numPoints = model.points.length;
+        this.posByteLength = this.numPoints * 3 * 4;
+        this.strideByteLength = -1;
         const transformedPositions = [];
         for (let i = 0; i < this.numPoints; i++) {
             let pos = new Float32Array([...model.points[i], 1]);
@@ -14,6 +16,7 @@ export class GameObject {
             transformedPositions.push(pos[0], pos[1], pos[2]);
         }
         this.positionsBuffer = WebGPU.device.createBuffer({
+            label: "gameobject point buffer",
             size: this.numPoints * 3 * 4, // vec3 (not aligned, don't use vec3 in wgsl)
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
             mappedAtCreation: true
@@ -21,6 +24,7 @@ export class GameObject {
         new Float32Array(this.positionsBuffer.getMappedRange()).set(new Float32Array(transformedPositions));
         this.positionsBuffer.unmap();
         this.colorsBuffer = WebGPU.device.createBuffer({
+            label: "gameobject color buffer",
             size: this.numPoints * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
             mappedAtCreation: true

@@ -1,19 +1,30 @@
 import { MatrixUtils } from "../matrix.js";
 import { WebGPU } from "../webgpu.js";
+import { GameObject } from "./gameobject.js";
+
 export class SharedData {
+
+    static NUM_SPHERES = 0;
+    static MAX_SPHERES = 5000000;
 
     static spheresBuffer: GPUBuffer;
     static oldSpheresBuffer: GPUBuffer;
     static colorIndexBuffer: GPUBuffer;
 
-    static NUM_SPHERES = 400000;
-    static lightDirection: Float32Array = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
 
+
+
+
+    // - collisions acceleration structure -
     static atomicBuffer: GPUBuffer;
     static gridBuffers: GPUBuffer[] = [];
     static NUM_GRID_BUFFERS = 4;
+    // ------------
 
+    // - other -
     static depthTexture: GPUTexture;
+    static lightDirection: Float32Array = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space
+    // ---------
 
     static init() {
         this.#initSphereBuffer();
@@ -34,52 +45,74 @@ export class SharedData {
         });
     }
 
+    static loadSceneToBuffers(objects: GameObject[])
+    {
+        const commandEncoder = WebGPU.device.createCommandEncoder();
+        for(const obj of objects)
+        {
+            // console.log(obj)
+            obj.strideByteLength = this.NUM_SPHERES*12;
+            this.NUM_SPHERES += obj.numPoints;
+
+            // console.log(obj.strideByteLength,obj.numPoints*12);
+ 
+            commandEncoder.copyBufferToBuffer(obj.positionsBuffer,0 ,this.spheresBuffer,obj.strideByteLength,obj.posByteLength );
+
+        }
+
+        commandEncoder.copyBufferToBuffer(this.spheresBuffer,0,this.oldSpheresBuffer,0,this.NUM_SPHERES*12);
+        WebGPU.device.queue.submit([commandEncoder.finish()]);
+    }
+
     static #initSphereBuffer() {
         // Create instance buffer with random positions
-        const instanceData = new Float32Array(this.NUM_SPHERES * 3); // xyz for each instance
-        for (let i = 0; i < this.NUM_SPHERES; i++) {
-            const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]))
+        // const instanceData = new Float32Array(this.MAX_SPHERES * 3); // xyz for each instance
+        // for (let i = 0; i < this.NUM_SPHERES; i++) {
+        //     const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]))
 
-            instanceData[i * 3] = dir[0] * Math.random() * 100; // x
-            instanceData[i * 3 + 1] = dir[1] * Math.random() * 100 // y
-            instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
-        }
+        //     instanceData[i * 3] = dir[0] * Math.random() * 100; // x
+        //     instanceData[i * 3 + 1] = dir[1] * Math.random() * 100 // y
+        //     instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
+        // }
 
 
 
         // console.log(instanceData.byteLength)
         this.spheresBuffer = WebGPU.device.createBuffer({
-            size: instanceData.byteLength,
+            label:"spheres buffer",
+            size: this.MAX_SPHERES * 3 * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-            mappedAtCreation: true
+            // mappedAtCreation: true
         });
-        new Float32Array(this.spheresBuffer.getMappedRange()).set(instanceData);
-        this.spheresBuffer.unmap();
+        // new Float32Array(this.spheresBuffer.getMappedRange()).set(instanceData);
+        // this.spheresBuffer.unmap();
 
         this.oldSpheresBuffer = WebGPU.device.createBuffer({
-            size: instanceData.byteLength,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
-            mappedAtCreation: true
+            label:"old spheres buffer",
+            size: this.MAX_SPHERES * 3 * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+            // mappedAtCreation: true
         });
-        new Float32Array(this.oldSpheresBuffer.getMappedRange()).set(instanceData);
-        this.oldSpheresBuffer.unmap();
+        // new Float32Array(this.oldSpheresBuffer.getMappedRange()).set(instanceData);
+        // this.oldSpheresBuffer.unmap();
 
 
     }
     static #initColorInderBuffer() {
         // Create color index buffer with random indices
-        const colorIndexData = new Uint32Array(this.NUM_SPHERES);
-        for (let i = 0; i < this.NUM_SPHERES; i++) {
-            colorIndexData[i] = 0; // 6 different colors
-        }
+        // const colorIndexData = new Uint32Array(this.NUM_SPHERES);
+        // for (let i = 0; i < this.NUM_SPHERES; i++) {
+        //     colorIndexData[i] = 0; // 6 different colors
+        // }
 
         this.colorIndexBuffer = WebGPU.device.createBuffer({
-            size: colorIndexData.byteLength,
+            label:"color buffer",
+            size: this.MAX_SPHERES * 4,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-            mappedAtCreation: true
+            // mappedAtCreation: true
         });
-        new Uint32Array(this.colorIndexBuffer.getMappedRange()).set(colorIndexData);
-        this.colorIndexBuffer.unmap();
+        // new Uint32Array(this.colorIndexBuffer.getMappedRange()).set(colorIndexData);
+        // this.colorIndexBuffer.unmap();
     }
     static #initAccelerationGrid() {
         const size = 256 * 256 * 256 * 4 * 2; // 1/4 GB all 4 buffers

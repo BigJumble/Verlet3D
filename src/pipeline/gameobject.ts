@@ -4,11 +4,13 @@ import { MatrixUtils } from "../matrix.js";
 
 export class GameObject {
 
-    numPoints: number;     // buffer of positions
+    numPoints: number;     
     numBuffers: number;
-    positionsBuffer: GPUBuffer;
+    strideByteLength: number;
+    posByteLength: number;
 
-    // buffer of colors
+    positionsBuffer: GPUBuffer; 
+
     colorsBuffer: GPUBuffer;
 
     // 10 buffers of connection constraints
@@ -31,6 +33,8 @@ export class GameObject {
     constructor(model: Model, transform: Float32Array) {
 
         this.numPoints = model.points.length;
+        this.posByteLength = this.numPoints * 3 * 4;
+        this.strideByteLength = -1;
 
         const transformedPositions = [];
         for(let i =0;i<this.numPoints;i++){
@@ -40,6 +44,7 @@ export class GameObject {
         }
 
         this.positionsBuffer = WebGPU.device.createBuffer({
+            label:"gameobject point buffer",
             size: this.numPoints * 3 * 4, // vec3 (not aligned, don't use vec3 in wgsl)
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
             mappedAtCreation: true
@@ -49,6 +54,7 @@ export class GameObject {
 
 
         this.colorsBuffer = WebGPU.device.createBuffer({
+            label:"gameobject color buffer",
             size: this.numPoints * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
             mappedAtCreation: true

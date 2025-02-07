@@ -3,6 +3,7 @@ import { Controls } from "./controls.js";
 import { Animator } from "./animator.js";
 import { PlayerController } from "./playerController.js";
 import { Orchestrator } from "./pipeline/orchestrator.js";
+import { Scene } from "./pipeline/scene.js";
 
 async function main() {
 
@@ -13,6 +14,7 @@ async function main() {
 
     Orchestrator.init();
 
+    
     PlayerController.init();
     
     Animator.startAnimation((deltaTime) => PlayerController.update(deltaTime));
