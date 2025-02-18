@@ -39,30 +39,30 @@ export class SharedData {
 }
 _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereBuffer() {
     // Create instance buffer with random positions
-    // const instanceData = new Float32Array(this.MAX_SPHERES * 3); // xyz for each instance
-    // for (let i = 0; i < this.NUM_SPHERES; i++) {
-    //     const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]))
-    //     instanceData[i * 3] = dir[0] * Math.random() * 100; // x
-    //     instanceData[i * 3 + 1] = dir[1] * Math.random() * 100 // y
-    //     instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
-    // }
+    const instanceData = new Float32Array(this.MAX_SPHERES * 3); // xyz for each instance
+    for (let i = 0; i < this.NUM_SPHERES; i++) {
+        const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]));
+        instanceData[i * 3] = dir[0] * Math.random() * 100; // x
+        instanceData[i * 3 + 1] = dir[1] * Math.random() * 100; // y
+        instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
+    }
     // console.log(instanceData.byteLength)
     this.spheresBuffer = WebGPU.device.createBuffer({
         label: "spheres buffer",
         size: this.MAX_SPHERES * 3 * 4,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-        // mappedAtCreation: true
+        mappedAtCreation: true
     });
-    // new Float32Array(this.spheresBuffer.getMappedRange()).set(instanceData);
-    // this.spheresBuffer.unmap();
+    new Float32Array(this.spheresBuffer.getMappedRange()).set(instanceData);
+    this.spheresBuffer.unmap();
     this.oldSpheresBuffer = WebGPU.device.createBuffer({
         label: "old spheres buffer",
         size: this.MAX_SPHERES * 3 * 4,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        // mappedAtCreation: true
+        mappedAtCreation: true
     });
-    // new Float32Array(this.oldSpheresBuffer.getMappedRange()).set(instanceData);
-    // this.oldSpheresBuffer.unmap();
+    new Float32Array(this.oldSpheresBuffer.getMappedRange()).set(instanceData);
+    this.oldSpheresBuffer.unmap();
 }, _SharedData_initColorInderBuffer = function _SharedData_initColorInderBuffer() {
     // Create color index buffer with random indices
     // const colorIndexData = new Uint32Array(this.NUM_SPHERES);
@@ -92,8 +92,8 @@ _a = SharedData, _SharedData_initSphereBuffer = function _SharedData_initSphereB
         }));
     }
 };
-SharedData.NUM_SPHERES = 0;
-SharedData.MAX_SPHERES = 5000000;
+SharedData.NUM_SPHERES = 100000;
+SharedData.MAX_SPHERES = 100000;
 SharedData.gridBuffers = [];
 SharedData.NUM_GRID_BUFFERS = 4;
 SharedData.lightDirection = MatrixUtils.normalize(new Float32Array([0.0, -1.0, 0.5])); // Light direction in world space

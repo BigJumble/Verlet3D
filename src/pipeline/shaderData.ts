@@ -4,8 +4,8 @@ import { GameObject } from "./gameobject.js";
 
 export class SharedData {
 
-    static NUM_SPHERES = 0;
-    static MAX_SPHERES = 5000000;
+    static NUM_SPHERES = 100000;
+    static MAX_SPHERES = 100000;
 
     static spheresBuffer: GPUBuffer;
     static oldSpheresBuffer: GPUBuffer;
@@ -66,14 +66,14 @@ export class SharedData {
 
     static #initSphereBuffer() {
         // Create instance buffer with random positions
-        // const instanceData = new Float32Array(this.MAX_SPHERES * 3); // xyz for each instance
-        // for (let i = 0; i < this.NUM_SPHERES; i++) {
-        //     const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]))
+        const instanceData = new Float32Array(this.MAX_SPHERES * 3); // xyz for each instance
+        for (let i = 0; i < this.NUM_SPHERES; i++) {
+            const dir = MatrixUtils.normalize(new Float32Array([(Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)]))
 
-        //     instanceData[i * 3] = dir[0] * Math.random() * 100; // x
-        //     instanceData[i * 3 + 1] = dir[1] * Math.random() * 100 // y
-        //     instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
-        // }
+            instanceData[i * 3] = dir[0] * Math.random() * 100; // x
+            instanceData[i * 3 + 1] = dir[1] * Math.random() * 100 // y
+            instanceData[i * 3 + 2] = dir[2] * Math.random() * 100; // z
+        }
 
 
 
@@ -82,19 +82,19 @@ export class SharedData {
             label:"spheres buffer",
             size: this.MAX_SPHERES * 3 * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-            // mappedAtCreation: true
+            mappedAtCreation: true
         });
-        // new Float32Array(this.spheresBuffer.getMappedRange()).set(instanceData);
-        // this.spheresBuffer.unmap();
+        new Float32Array(this.spheresBuffer.getMappedRange()).set(instanceData);
+        this.spheresBuffer.unmap();
 
         this.oldSpheresBuffer = WebGPU.device.createBuffer({
             label:"old spheres buffer",
             size: this.MAX_SPHERES * 3 * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-            // mappedAtCreation: true
+            mappedAtCreation: true
         });
-        // new Float32Array(this.oldSpheresBuffer.getMappedRange()).set(instanceData);
-        // this.oldSpheresBuffer.unmap();
+        new Float32Array(this.oldSpheresBuffer.getMappedRange()).set(instanceData);
+        this.oldSpheresBuffer.unmap();
 
 
     }

@@ -21,7 +21,7 @@ export class Orchestrator {
     static init() {
         Scene.loadScene0();
         SharedData.init();
-        SharedData.loadSceneToBuffers(Scene.objects);
+        // SharedData.loadSceneToBuffers(Scene.objects);
 
         ComputeMovement.init();
         ComputeGrid.init();
