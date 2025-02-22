@@ -1,6 +1,6 @@
-import { WebGPU } from "../webgpu.js";
-import { Model } from "../interfaces/model.js";
-import { MatrixUtils } from "../matrix.js";
+import { WebGPU } from "../webgpu";
+import { Model } from "../interfaces/model";
+import { mat4, vec3, vec4 } from "gl-matrix";
 
 export class GameObject {
 
@@ -19,28 +19,32 @@ export class GameObject {
     connectionBufferSizes: number[] = [];
 
     // current center position
-    centerPosition: { x: number; y: number; z: number };
+    centerPosition: vec3;
 
     // current min_xyz | bounding box min
-    boundingBoxMin: { x: number; y: number; z: number };
+    boundingBoxMin: vec3;
 
     // current max_xyz | bounding box max
-    boundingBoxMax: { x: number; y: number; z: number };
+    boundingBoxMax: vec3;
 
     // isactive bool | in the scene? / near player?
     isActive: boolean;
 
-    constructor(model: Model, transform: Float32Array) {
+    constructor(model: Model, transform: mat4) {
 
         this.numPoints = model.points.length;
         this.posByteLength = this.numPoints * 3 * 4;
         this.strideByteLength = -1;
 
-        const transformedPositions = [];
-        for(let i =0;i<this.numPoints;i++){
-            let pos = new Float32Array([...model.points[i], 1]);
-            pos = MatrixUtils.multiplyVec4(transform, pos);
-            transformedPositions.push(pos[0],pos[1],pos[2]);
+        const transformedPositions: number[] = [];
+        const tempVec4 = vec4.create();
+        const tempVec3 = vec3.create();
+
+        for(let i = 0; i < this.numPoints; i++) {
+            vec3.copy(tempVec3, model.points[i] as vec3);
+            vec4.set(tempVec4, tempVec3[0], tempVec3[1], tempVec3[2], 1.0);
+            vec4.transformMat4(tempVec4, tempVec4, transform);
+            transformedPositions.push(tempVec4[0], tempVec4[1], tempVec4[2]);
         }
 
         this.positionsBuffer = WebGPU.device.createBuffer({
@@ -90,9 +94,9 @@ export class GameObject {
             this.connectionPairsBuffers.push(tempDistBuffer);
         }
 
-        this.centerPosition = { x: 0, y: 0, z: 0 };
-        this.boundingBoxMin = { x: 0, y: 0, z: 0 };
-        this.boundingBoxMax = { x: 0, y: 0, z: 0 };
+        this.centerPosition = vec3.create();
+        this.boundingBoxMin = vec3.create();
+        this.boundingBoxMax = vec3.create();
         this.isActive = false;
     }
     // buffer of positions

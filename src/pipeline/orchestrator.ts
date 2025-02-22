@@ -1,18 +1,16 @@
-import { MatrixUtils } from "../matrix.js";
-import { cube } from "../models/cube.js";
-import { PlayerController } from "../playerController.js";
-import { WebGPU } from "../webgpu.js";
-import { GameObject } from "./gameobject.js";
-import { Scene } from "./scene.js";
-import { SharedData } from "./shaderData.js";
-import { ComputeCollisions } from "./shaders/computeCollisions.js";
-import { ComputeGrid } from "./shaders/computeGrid.js";
-import { ComputeGrid3DT } from "./shaders/computeGrid3DT.js";
-// import { ComputeCos } from "./shaders/computeCos.js";
-import { ComputeMovement } from "./shaders/computeMovement.js";
-import { RenderBillboards } from "./shaders/renderBillboards.js";
-import { RenderCube } from "./shaders/renderGrid.js";
-import { RenderSpheres } from "./shaders/renderSpheres.js";
+import { cube } from "../models/cube";
+import { PlayerController } from "../playerController";
+import { WebGPU } from "../webgpu";
+import { GameObject } from "./gameobject";
+import { Scene } from "./scene";
+import { SharedData } from "./shaderData";
+import { ComputeCollisions } from "./shaders/computeCollisions";
+import { ComputeGrid } from "./shaders/computeGrid";
+import { ComputeGrid3DT } from "./shaders/computeGrid3DT";
+import { ComputeMovement } from "./shaders/computeMovement";
+import { RenderBillboards } from "./shaders/renderBillboards";
+import { RenderCube } from "./shaders/renderGrid";
+import { RenderSpheres } from "./shaders/renderSpheres";
 
 export class Orchestrator {
     static resized = false;
@@ -21,7 +19,8 @@ export class Orchestrator {
     static init() {
         Scene.loadScene0();
         SharedData.init();
-        SharedData.loadSceneToBuffers(Scene.objects);
+        // SharedData.loadSceneToBuffers(Scene.objects);
+        // SharedData.loadDefaultScene(1000000);
 
         ComputeMovement.init();
         ComputeGrid.init();
@@ -35,11 +34,12 @@ export class Orchestrator {
     }
     static update(deltaTime: number) {
         if (PlayerController.paused) return;
+        if (SharedData.NUM_SPHERES === 0) return;
         if (this.resized) {
             SharedData.resize();
             this.resized = false;
         }
-        if (SharedData.NUM_SPHERES === 0) return;
+
 
         const commandEncoder = WebGPU.device.createCommandEncoder();
 

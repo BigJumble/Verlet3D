@@ -1,6 +1,6 @@
-import { SharedData } from "../shaderData.js";
-import { WebGPU } from "../../webgpu.js";
-import { PlayerController } from "../../playerController.js";
+import { SharedData } from "../shaderData";
+import { WebGPU } from "../../webgpu";
+import { PlayerController } from "../../playerController";
 
 export class RenderCube {
     static pipeline: GPURenderPipeline;
@@ -141,86 +141,86 @@ export class RenderCube {
             label: "Cube rendering shader",
             code: /*wgsl*/`
 
-                struct Uniforms {
-                    modelViewProj: mat4x4f
-                }
 
-                @binding(0) @group(0) var<uniform> uniforms: Uniforms;
-                @group(0) @binding(1) var<storage, read> atomicCounter: array<u32>;
-                @group(0) @binding(2) var<storage, read> cellPos: array<f32>;
+struct Uniforms {
+    modelViewProj: mat4x4f
+}
 
-                
-                struct VertexOutput {
-                    @builtin(position) position: vec4f,
-                    @location(0) color: vec3f,
-                }
-                
-                @vertex 
-                fn vertexMain(
-                    @builtin(vertex_index) vertexIndex: u32,
-                    @builtin(instance_index) instanceIndex: u32,
-                    // @location(0) position: vec3f,
-                ) -> VertexOutput {
-
-                    let cell = vec3f(cellPos[instanceIndex*3+0],cellPos[instanceIndex*3+1],cellPos[instanceIndex*3+2]);
-
-                    let cellPosLocal = vec3i(cell+128);
-                    let gridIndex = cellPosLocal.x + cellPosLocal.y * 256 + cellPosLocal.z * 65536;
+@binding(0) @group(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var<storage, read> atomicCounter: array<u32>;
+@group(0) @binding(2) var<storage, read> cellPos: array<f32>;
 
 
-                    // Cube vertices for edges
-                    let vertices = array<vec3f, 24>(
-                        // Front face edges
-                        vec3f(0.0, 0.0, 0.0), vec3f(1.0, 0.0, 0.0),
-                        vec3f(1.0, 0.0, 0.0), vec3f(1.0, 1.0, 0.0),
-                        vec3f(1.0, 1.0, 0.0), vec3f(0.0, 1.0, 0.0),
-                        vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 0.0),
-                        
-                        // Back face edges
-                        vec3f(0.0, 0.0, 1.0), vec3f(1.0, 0.0, 1.0),
-                        vec3f(1.0, 0.0, 1.0), vec3f(1.0, 1.0, 1.0),
-                        vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 1.0),
-                        vec3f(0.0, 1.0, 1.0), vec3f(0.0, 0.0, 1.0),
-                        
-                        // Connecting edges
-                        vec3f(0.0, 0.0, 0.0), vec3f(0.0, 0.0, 1.0),
-                        vec3f(1.0, 0.0, 0.0), vec3f(1.0, 0.0, 1.0),
-                        vec3f(1.0, 1.0, 0.0), vec3f(1.0, 1.0, 1.0),
-                        vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.0, 1.0)
-                    );
+struct VertexOutput {
+    @builtin(position) position: vec4f,
+    @location(0) color: vec3f,
+}
 
-                    const colorPalette = array<vec3f, 10>(
-                        vec3f(1.0, 1.0, 1.0),  // White
-                        vec3f(0.0, 1.0, 0.0),  // Vibrant Green
-                        vec3f(0.0, 0.0, 1.0),  // Vibrant Blue
-                        vec3f(1.0, 1.0, 0.0),  // Vibrant Yellow
-                        vec3f(1.0, 0.5, 0.0),  // light Red
-                        vec3f(0.2, 1.0, 1.0),  // Cyan
-                        vec3f(1.0, 0.0, 1.0),  // Magenta
-                        vec3f(0.5, 0.5, 0.5),  // Gray
-                        vec3f(1.0, 0.0, 0.0),  // RED
-                        vec3f(0.0, 0.0, 0.0)   // Black
-                    );   
+@vertex 
+fn vertexMain(
+    @builtin(vertex_index) vertexIndex: u32,
+    @builtin(instance_index) instanceIndex: u32,
+    // @location(0) position: vec3f,
+) -> VertexOutput {
 
-                    var output: VertexOutput;
+    let cell = vec3f(cellPos[instanceIndex*3+0],cellPos[instanceIndex*3+1],cellPos[instanceIndex*3+2]);
 
-                    var localPos = vertices[vertexIndex]*0.99;
+    let cellPosLocal = vec3i(cell+128);
+    let gridIndex = cellPosLocal.x + cellPosLocal.y * 256 + cellPosLocal.z * 65536;
 
-                    output.position = uniforms.modelViewProj * vec4f(localPos + cell, 1.0);
-                    output.color = colorPalette[atomicCounter[gridIndex]];
-                    return output;
-                }
-                
-                @fragment
-                fn fragmentMain(@location(0) color: vec3f) -> @location(0) vec4f {
-                    return vec4f(color, 1.0);
-                }
-            `
+
+    // Cube vertices for edges
+    let vertices = array<vec3f, 24>(
+        // Front face edges
+        vec3f(0.0, 0.0, 0.0), vec3f(1.0, 0.0, 0.0),
+        vec3f(1.0, 0.0, 0.0), vec3f(1.0, 1.0, 0.0),
+        vec3f(1.0, 1.0, 0.0), vec3f(0.0, 1.0, 0.0),
+        vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 0.0),
+        
+        // Back face edges
+        vec3f(0.0, 0.0, 1.0), vec3f(1.0, 0.0, 1.0),
+        vec3f(1.0, 0.0, 1.0), vec3f(1.0, 1.0, 1.0),
+        vec3f(1.0, 1.0, 1.0), vec3f(0.0, 1.0, 1.0),
+        vec3f(0.0, 1.0, 1.0), vec3f(0.0, 0.0, 1.0),
+        
+        // Connecting edges
+        vec3f(0.0, 0.0, 0.0), vec3f(0.0, 0.0, 1.0),
+        vec3f(1.0, 0.0, 0.0), vec3f(1.0, 0.0, 1.0),
+        vec3f(1.0, 1.0, 0.0), vec3f(1.0, 1.0, 1.0),
+        vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.0, 1.0)
+    );
+
+    const colorPalette = array<vec3f, 10>(
+        vec3f(1.0, 1.0, 1.0),  // White
+        vec3f(0.0, 1.0, 0.0),  // Vibrant Green
+        vec3f(0.0, 0.0, 1.0),  // Vibrant Blue
+        vec3f(1.0, 1.0, 0.0),  // Vibrant Yellow
+        vec3f(1.0, 0.5, 0.0),  // light Red
+        vec3f(0.2, 1.0, 1.0),  // Cyan
+        vec3f(1.0, 0.0, 1.0),  // Magenta
+        vec3f(0.5, 0.5, 0.5),  // Gray
+        vec3f(1.0, 0.0, 0.0),  // RED
+        vec3f(0.0, 0.0, 0.0)   // Black
+    );   
+
+    var output: VertexOutput;
+
+    var localPos = vertices[vertexIndex]*0.99;
+
+    output.position = uniforms.modelViewProj * vec4f(localPos + cell, 1.0);
+    output.color = colorPalette[atomicCounter[gridIndex]];
+    return output;
+}
+
+@fragment
+fn fragmentMain(@location(0) color: vec3f) -> @location(0) vec4f {
+    return vec4f(color, 1.0);
+}`
         });
     }
 
     static tick(renderPass:GPURenderPassEncoder) {
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.viewMatrix);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, new Float32Array(PlayerController.viewMatrix.values()));
 
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);

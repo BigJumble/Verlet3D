@@ -1,6 +1,6 @@
-import { PlayerController } from "../../playerController.js";
-import { WebGPU } from "../../webgpu.js";
-import { SharedData } from "../shaderData.js";
+import { PlayerController } from "../../playerController";
+import { WebGPU } from "../../webgpu";
+import { SharedData } from "../shaderData";
 
 export class ComputeMovement {
     static computePipeline: GPUComputePipeline;
@@ -70,83 +70,82 @@ export class ComputeMovement {
 
     static #createComputeShader() {
         const computeShaderCode = /*wgsl*/`
-        struct Uniforms {
-            time: f32,
-            numSpheres: u32,
-            gravityMode: u32,
-        }
+struct Uniforms {
+    time: f32,
+    numSpheres: u32,
+    gravityMode: u32,
+}
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var<storage, read_write> oldPositions: array<f32>;
+@group(0) @binding(2) var<storage, read_write> positions: array<f32>;
+
+@compute @workgroup_size(256)
+fn computeMain(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let sphereID = u32(global_id.x);
+    if (global_id.x >= uniforms.numSpheres) {
+        return;
+    }
     
-        @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-        @group(0) @binding(1) var<storage, read_write> oldPositions: array<f32>;
-        @group(0) @binding(2) var<storage, read_write> positions: array<f32>;
-    
-        @compute @workgroup_size(256)
-        fn computeMain(@builtin(global_invocation_id) global_id: vec3<u32>) {
-            let sphereID = u32(global_id.x);
-            if (global_id.x >= uniforms.numSpheres) {
-                return;
-            }
-            
-            var oldPos = vec3f(oldPositions[sphereID*3+0],oldPositions[sphereID*3+1],oldPositions[sphereID*3+2]);
-            var nowPos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2]);
+    var oldPos = vec3f(oldPositions[sphereID*3+0],oldPositions[sphereID*3+1],oldPositions[sphereID*3+2]);
+    var nowPos = vec3f(positions[sphereID*3+0],positions[sphereID*3+1],positions[sphereID*3+2]);
 
-            var gravityDir = vec3f(0,0,0);// -normalize(nowPos);
-            switch (uniforms.gravityMode)
-            {
-                case 0u: {
-                    gravityDir = vec3f(0.0, 0.0, 0.0);
-                    break;
-                }
-                case 1u: {
-                    gravityDir = -normalize(nowPos);
-                    break;
-                }
-                case 2u: {
-                    let distSq = dot(nowPos, nowPos);
-                    if (distSq > 100.0 * 100.0) {
-                        gravityDir = -normalize(nowPos);
-                    } else if (distSq < 95.0 * 95.0) {
-                        gravityDir = normalize(nowPos);
-                    }
-                    break;
-                }
-                case 3u: {
-                    let noY = vec3f(nowPos.x,0,nowPos.z);
-                    let distSq = dot(noY, noY);
-                    if (distSq > 100.0 * 100.0) {
-                        gravityDir = -normalize(noY);
-                    } else if (distSq < 95.0 * 95.0) {
-                        gravityDir = normalize(noY);
-                    }
-                    gravityDir.y =sign(-nowPos.y);
-                    gravityDir = normalize(gravityDir);
-                    break;
-                }
-                default: {
-                    gravityDir = vec3f(0.0, 0.0, 0.0);
-                    break;
-                }
-                
-            }
-
-            let velocity = nowPos - oldPos;
-
-            oldPos = nowPos;
-
-            nowPos += velocity * 0.99;
-
-            nowPos += gravityDir * 0.0013888888888;
-            // nowPos *= 0.99;
-
-            oldPositions[sphereID*3+0] = oldPos.x;
-            oldPositions[sphereID*3+1] = oldPos.y;
-            oldPositions[sphereID*3+2] = oldPos.z;
-
-            positions[sphereID*3+0] = nowPos.x;
-            positions[sphereID*3+1] = nowPos.y;
-            positions[sphereID*3+2] = nowPos.z;
+    var gravityDir = vec3f(0,0,0);// -normalize(nowPos);
+    switch (uniforms.gravityMode)
+    {
+        case 0u: {
+            gravityDir = vec3f(0.0, 0.0, 0.0);
+            break;
         }
-    `;
+        case 1u: {
+            gravityDir = -normalize(nowPos);
+            break;
+        }
+        case 2u: {
+            let distSq = dot(nowPos, nowPos);
+            if (distSq > 100.0 * 100.0) {
+                gravityDir = -normalize(nowPos);
+            } else if (distSq < 95.0 * 95.0) {
+                gravityDir = normalize(nowPos);
+            }
+            break;
+        }
+        case 3u: {
+            let noY = vec3f(nowPos.x,0,nowPos.z);
+            let distSq = dot(noY, noY);
+            if (distSq > 100.0 * 100.0) {
+                gravityDir = -normalize(noY);
+            } else if (distSq < 95.0 * 95.0) {
+                gravityDir = normalize(noY);
+            }
+            gravityDir.y =sign(-nowPos.y);
+            gravityDir = normalize(gravityDir);
+            break;
+        }
+        default: {
+            gravityDir = vec3f(0.0, 0.0, 0.0);
+            break;
+        }
+        
+    }
+
+    let velocity = nowPos - oldPos;
+
+    oldPos = nowPos;
+
+    nowPos += velocity * 0.99;
+
+    nowPos += gravityDir * 0.0013888888888;
+    // nowPos *= 0.99;
+
+    oldPositions[sphereID*3+0] = oldPos.x;
+    oldPositions[sphereID*3+1] = oldPos.y;
+    oldPositions[sphereID*3+2] = oldPos.z;
+
+    positions[sphereID*3+0] = nowPos.x;
+    positions[sphereID*3+1] = nowPos.y;
+    positions[sphereID*3+2] = nowPos.z;
+}`;
 
         return WebGPU.device.createShaderModule({
             label: "Movement compute shader",

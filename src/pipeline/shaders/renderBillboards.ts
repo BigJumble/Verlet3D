@@ -1,6 +1,7 @@
-import { SharedData } from "../shaderData.js";
-import { WebGPU } from "../../webgpu.js";
-import { PlayerController } from "../../playerController.js";
+import { SharedData } from "../shaderData";
+import { WebGPU } from "../../webgpu";
+import { PlayerController } from "../../playerController";
+import { mat4, vec4 } from "gl-matrix";
 
 export class RenderBillboards {
     static pipeline: GPURenderPipeline;
@@ -100,111 +101,114 @@ export class RenderBillboards {
         return WebGPU.device.createShaderModule({
             label: "Spheres rendering shader",
             code: /*wgsl*/`
-            struct Uniforms {
-                translationMatrix: mat4x4f,
-                rotationMatrix: mat4x4f,
-                projectionMatrix: mat4x4f,
-                lightDirection: vec4f,
-            }
-            @binding(0) @group(0) var<uniform> uniforms: Uniforms;
-            
-            struct VertexOutput {
-                @builtin(position) position: vec4f,
-                @location(0) @interpolate(flat) color: vec3f,
-                @location(1) uv: vec2f,
-            }
-            
-            const colorPalette = array<vec3f, 6>(
-                vec3f(1.0, 1.0, 1.0),  // White
-                vec3f(0.0, 1.0, 0.0),  // Vibrant Green
-                vec3f(0.0, 0.0, 1.0),  // Vibrant Blue
-                vec3f(1.0, 1.0, 0.0),  // Vibrant Yellow
-                vec3f(1.0, 0.0, 0.0),  // RED
-                vec3f(0.2, 1.0, 1.0)   // Vibrant Cyan
-            );
-            
-            @vertex
-            fn vertexMain(
-                @builtin(vertex_index) vertexIndex: u32,
-                @builtin(instance_index) instanceIndex: u32,
-                @location(0) instancePosition: vec3f,
-                @location(1) colorIndex: u32
-            ) -> VertexOutput {
-                let positions = array<vec2f, 3>(
-                    vec2f(0.0,  0.5773502691896258),    // Top vertex: (0, 1/√3)
-                    vec2f(-0.5, -0.2886751345948129),   // Bottom left: (-1/2, -1/(2√3))
-                    vec2f(0.5,  -0.2886751345948129)    // Bottom right: (1/2, -1/(2√3))
-                );
-                
-                // UV coordinates for triangle vertices
-                let uvs = array<vec2f, 3>(
-                    vec2f(0.0,  0.5773502691896258),    // Top vertex: (0, 1/√3)
-                    vec2f(-0.5, -0.2886751345948129),   // Bottom left: (-1/2, -1/(2√3))
-                    vec2f(0.5,  -0.2886751345948129)    // Bottom right: (1/2, -1/(2√3))
-                );
-            
-                var output: VertexOutput;
-                let localPos = vec3f(positions[vertexIndex], 0.0);
-                
-                // Calculate direction from instance position to camera position
-                let cameraPos = -uniforms.translationMatrix[3].xyz;
-                let toCamera = normalize(cameraPos - instancePosition);
-                
-                // Create rotation matrix to face camera
-                let up = vec3f(0.0, 1.0, 0.0);
-                let right = normalize(cross(up, toCamera));
-                let adjustedUp = normalize(cross(toCamera, right));
-                
-                let scaledLocalPos = localPos * 3.464101615137754 * 0.5; // Scale manually as needed
-                
-                // Apply billboard rotation to local position
-                let billboardPos = right * scaledLocalPos.x + adjustedUp * scaledLocalPos.y + toCamera * scaledLocalPos.z;
-            
-                // Apply translation
-                let worldPos = billboardPos + instancePosition;
-            
-                // Apply view transform
-                let viewPos = uniforms.translationMatrix * vec4f(worldPos, 1.0);
-            
-                // Apply rotation
-                let rotatedPos = uniforms.rotationMatrix * viewPos;
-            
-                // Apply projection
-                output.position = uniforms.projectionMatrix * rotatedPos;
-                output.color = colorPalette[colorIndex]; // Use color from palette
-                output.uv = uvs[vertexIndex];
-                
-                return output;
-            }
-            
-            @fragment
-            fn fragmentMain(
-                @location(0) @interpolate(flat) color: vec3f,
-                @location(1) uv: vec2f
-            ) -> @location(0) vec4f {
-                // Calculate distance from center of triangle
-                let dist = length(uv);
-                
-                // Create circle mask
-                let radius = 0.2886751345948129; // Distance from center to edge of the triangle
-                if (dist > radius) {
-                    discard;
-                }
-                
-                return vec4f(color, 1.0);
-            }
-        
-            `
+struct Uniforms {
+    translationMatrix: mat4x4f,
+    rotationMatrix: mat4x4f,
+    projectionMatrix: mat4x4f,
+    lightDirection: vec4f,
+}
+@binding(0) @group(0) var<uniform> uniforms: Uniforms;
+
+struct VertexOutput {
+    @builtin(position) position: vec4f,
+    @location(0) @interpolate(flat) color: vec3f,
+    @location(1) uv: vec2f,
+}
+
+const colorPalette = array<vec3f, 6>(
+    vec3f(1.0, 1.0, 1.0),  // White
+    vec3f(0.0, 1.0, 0.0),  // Vibrant Green
+    vec3f(0.0, 0.0, 1.0),  // Vibrant Blue
+    vec3f(1.0, 1.0, 0.0),  // Vibrant Yellow
+    vec3f(1.0, 0.0, 0.0),  // RED
+    vec3f(0.2, 1.0, 1.0)   // Vibrant Cyan
+);
+
+@vertex
+fn vertexMain(
+    @builtin(vertex_index) vertexIndex: u32,
+    @builtin(instance_index) instanceIndex: u32,
+    @location(0) instancePosition: vec3f,
+    @location(1) colorIndex: u32
+) -> VertexOutput {
+    let positions = array<vec2f, 3>(
+        vec2f(0.0,  0.5773502691896258),    // Top vertex: (0, 1/√3)
+        vec2f(-0.5, -0.2886751345948129),   // Bottom left: (-1/2, -1/(2√3))
+        vec2f(0.5,  -0.2886751345948129)    // Bottom right: (1/2, -1/(2√3))
+    );
+    
+    // UV coordinates for triangle vertices
+    let uvs = array<vec2f, 3>(
+        vec2f(0.0,  0.5773502691896258),    // Top vertex: (0, 1/√3)
+        vec2f(-0.5, -0.2886751345948129),   // Bottom left: (-1/2, -1/(2√3))
+        vec2f(0.5,  -0.2886751345948129)    // Bottom right: (1/2, -1/(2√3))
+    );
+
+    var output: VertexOutput;
+    let localPos = vec3f(positions[vertexIndex], 0.0);
+    
+    // Calculate direction from instance position to camera position
+    let cameraPos = -uniforms.translationMatrix[3].xyz;
+    let toCamera = normalize(cameraPos - instancePosition);
+    
+    // Create rotation matrix to face camera
+    let up = vec3f(0.0, 1.0, 0.0);
+    let right = normalize(cross(up, toCamera));
+    let adjustedUp = normalize(cross(toCamera, right));
+    
+    let scaledLocalPos = localPos * 3.464101615137754 * 0.5; // Scale manually as needed
+    
+    // Apply billboard rotation to local position
+    let billboardPos = right * scaledLocalPos.x + adjustedUp * scaledLocalPos.y + toCamera * scaledLocalPos.z;
+
+    // Apply translation
+    let worldPos = billboardPos + instancePosition;
+
+    // Apply view transform
+    let viewPos = uniforms.translationMatrix * vec4f(worldPos, 1.0);
+
+    // Apply rotation
+    let rotatedPos = uniforms.rotationMatrix * viewPos;
+
+    // Apply projection
+    output.position = uniforms.projectionMatrix * rotatedPos;
+    output.color = colorPalette[colorIndex]; // Use color from palette
+    output.uv = uvs[vertexIndex];
+    
+    return output;
+}
+
+@fragment
+fn fragmentMain(
+    @location(0) @interpolate(flat) color: vec3f,
+    @location(1) uv: vec2f
+) -> @location(0) vec4f {
+    // Calculate distance from center of triangle
+    let dist = length(uv);
+    
+    // Create circle mask
+    let radius = 0.2886751345948129; // Distance from center to edge of the triangle
+    if (dist > radius) {
+        discard;
+    }
+    
+    return vec4f(color, 1.0);
+}`
         });
 
     }
 
 
     static tick() {
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, PlayerController.translationMatrix);
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, PlayerController.rotationMatrix);
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 128, PlayerController.projectionMatrix);
-        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 192, SharedData.lightDirection);
+        const translationArray = new Float32Array(PlayerController.translationMatrix.values());
+        const rotationArray = new Float32Array(PlayerController.rotationMatrix.values());
+        const projectionArray = new Float32Array(PlayerController.projectionMatrix.values());
+        const lightArray = new Float32Array(SharedData.lightDirection.values());
+
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 0, translationArray);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 64, rotationArray);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 128, projectionArray);
+        WebGPU.device.queue.writeBuffer(this.uniformBuffer, 192, lightArray);
 
         const view = WebGPU.context.getCurrentTexture().createView();
 

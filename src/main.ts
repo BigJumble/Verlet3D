@@ -1,9 +1,9 @@
-import { WebGPU } from "./webgpu.js";
-import { Controls } from "./controls.js";
-import { Animator } from "./animator.js";
-import { PlayerController } from "./playerController.js";
-import { Orchestrator } from "./pipeline/orchestrator.js";
-import { Scene } from "./pipeline/scene.js";
+import { WebGPU } from "./webgpu";
+import { Controls } from "./controls";
+import { Animator } from "./animator";
+import { PlayerController } from "./playerController";
+import { Orchestrator } from "./pipeline/orchestrator";
+import { Scene } from "./pipeline/scene";
 
 async function main() {
 
@@ -23,3 +23,7 @@ async function main() {
 }
 
 main();
+
+// Expose SharedData to console for debugging
+import { SharedData } from "./pipeline/shaderData";
+(window as any).SharedData = SharedData;

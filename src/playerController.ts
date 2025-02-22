@@ -1,6 +1,6 @@
-import { WebGPU } from "./webgpu.js";
-import { Controls } from "./controls.js";
-import { MatrixUtils } from "./matrix.js";
+import { WebGPU } from "./webgpu";
+import { Controls } from "./controls";
+import { mat4, vec3 } from 'gl-matrix';
 
 export enum GravityMode {
     None = 0,
@@ -10,21 +10,21 @@ export enum GravityMode {
 }
 
 export class PlayerController {
-    static translationMatrix = MatrixUtils.identity();
-    static rotationMatrix = MatrixUtils.identity();
+    static translationMatrix = mat4.create();
+    static rotationMatrix = mat4.create();
+    static projectionMatrix = mat4.create();
     // static scaleMatrix = MatrixUtils.identity();
-    static projectionMatrix = new Float32Array(16);
+    
     // Scene rotation angles
     static yaw = 0;
     static pitch = 0;
-    static position = new Float32Array([0, 0, 200]); // Scene offset x, y, z
+    static position = vec3.fromValues(0, 0, 200); // Scene offset x, y, z
 
     static lastMouseX = 0;
     static lastMouseY = 0;
     static paused = false;
 
-    static viewMatrix: Float32Array;
-
+    static viewMatrix = mat4.create();
 
     static gravityMode: GravityMode = GravityMode.Center;
 
@@ -32,7 +32,6 @@ export class PlayerController {
         // Set initial mouse position
         this.lastMouseX = Controls.mousePosition.x;
         this.lastMouseY = Controls.mousePosition.y;
-
 
         // Update projection matrix initially
         this.updateProjectionMatrix();
@@ -44,7 +43,7 @@ export class PlayerController {
         const near = 0.1;
         const far = 3000.0;
 
-        this.projectionMatrix = MatrixUtils.perspective(fov, aspect, near, far);
+        mat4.perspective(this.projectionMatrix, fov, aspect, near, far);
     }
 
     static update(deltaTime: number): void {
@@ -106,18 +105,17 @@ export class PlayerController {
             this.gravityMode = GravityMode.Donut;
         }
 
-
         // Create rotation matrices
-        const rotationX = MatrixUtils.rotationX(this.pitch);
-        const rotationY = MatrixUtils.rotationY(this.yaw);
-        this.translationMatrix = MatrixUtils.translation(-this.position[0], -this.position[1], -this.position[2]);
+        mat4.identity(this.rotationMatrix);
+        mat4.rotateX(this.rotationMatrix, this.rotationMatrix, this.pitch);
+        mat4.rotateY(this.rotationMatrix, this.rotationMatrix, this.yaw);
+        
+        mat4.identity(this.translationMatrix);
+        mat4.translate(this.translationMatrix, this.translationMatrix, vec3.fromValues(-this.position[0], -this.position[1], -this.position[2]));
 
         // Combine rotations and translation
-        // this.viewMatrix = MatrixUtils.multiply(this.viewMatrix, translation);
-        this.rotationMatrix = MatrixUtils.multiply(rotationY, rotationX);
-        // this.scaleMatrix = MatrixUtils.scale(30, 30, 30);
-        //  = MatrixUtils.multiply(this.rotationMatrix, translation);
-        this.viewMatrix = MatrixUtils.multiply(this.translationMatrix, this.rotationMatrix);
-        this.viewMatrix = MatrixUtils.multiply(this.viewMatrix, this.projectionMatrix);
+        mat4.identity(this.viewMatrix);
+        mat4.multiply(this.viewMatrix, this.translationMatrix, this.rotationMatrix);
+        mat4.multiply(this.viewMatrix, this.viewMatrix, this.projectionMatrix);
     }
 }

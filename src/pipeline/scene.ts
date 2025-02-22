@@ -1,8 +1,7 @@
-import { MatrixUtils } from "../matrix.js";
-import { cube } from "../models/cube.js";
-import { GameObject } from "./gameobject.js";
-import { SharedData } from "./shaderData.js";
-
+import { cube } from "../models/cube";
+import { GameObject } from "./gameobject";
+import { SharedData } from "./shaderData";
+import { mat4 } from "gl-matrix";
 export class Scene
 {
     static objects: GameObject[] = [];
@@ -16,7 +15,7 @@ export class Scene
         for (let x = -5; x <= 5; x++) {
             for (let y = -5; y <= 5; y++) {
                 for (let z = -5; z <= 5; z++) {
-                    this.objects.push(new GameObject(cube, MatrixUtils.translation(x*10, y*10, z*10)));
+                    this.objects.push(new GameObject(cube, mat4.fromTranslation(mat4.create(), [x*10, y*10, z*10])));
                 }
             }
         }

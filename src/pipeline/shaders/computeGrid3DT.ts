@@ -1,5 +1,5 @@
-import { WebGPU } from "../../webgpu.js";
-import { SharedData } from "../shaderData.js";
+import { WebGPU } from "../../webgpu";
+import { SharedData } from "../shaderData";
 
 export class ComputeGrid3DT {
     static computePipeline: GPUComputePipeline;

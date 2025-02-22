@@ -1,5 +1,5 @@
-import { PlayerController } from "./playerController.js";
-import { Orchestrator } from "./pipeline/orchestrator.js";
+import { PlayerController } from "./playerController";
+import { Orchestrator } from "./pipeline/orchestrator";
 
 export class WebGPU {
     static device: GPUDevice;
